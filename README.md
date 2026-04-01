@@ -15,5 +15,5 @@
 
 ### 1. 创建环境
 ```powershell
-conda create -n rl_sched python=3.10 -y
-conda activate rl_sched
+conda create -n Mytest python=3.10 -y
+conda activate Mytest
