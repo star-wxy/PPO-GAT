@@ -1,0 +1,5 @@
+{
+  "python.defaultInterpreterPath": "D:/MiniConda/envs/mytest/python.exe",
+  "python.terminal.activateEnvironment": true,
+  "python.terminal.activateEnvInCurrentTerminal": true
+}
