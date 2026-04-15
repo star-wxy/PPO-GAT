@@ -4,9 +4,24 @@ import numpy as np
 import pandas as pd
 from stable_baselines3 import PPO
 
-from src.envs.scheduler_env import SchedulerEnv
+from src.envs.multi_robot_scheduler_env import SchedulerEnv
 from src.utils.config import load_yaml
 from src.utils.display_names import get_display_name
+
+
+EVAL_SEEDS = [11, 23, 37, 41, 53]
+METRIC_KEYS = [
+    "steps",
+    "avg_reward",
+    "total_reward",
+    "avg_compute_time",
+    "avg_queue_delay",
+    "avg_network_latency",
+    "avg_total_time",
+    "avg_energy_cost",
+    "avg_deadline_penalty",
+    "avg_overload_penalty",
+]
 
 
 def adapt_observation_for_model(obs: np.ndarray, expected_dim: int) -> np.ndarray:
@@ -29,15 +44,17 @@ def adapt_observation_for_model(obs: np.ndarray, expected_dim: int) -> np.ndarra
     )
 
 
-def evaluate_model(model_name: str, model_path: Path, env_cfg: dict) -> dict:
-    print(f">>> evaluating model: {model_name}", flush=True)
-    print(f">>> model path: {model_path}", flush=True)
-
+def evaluate_single_seed(
+    model_name: str,
+    model_path: Path,
+    env_cfg: dict,
+    eval_seed: int,
+) -> dict:
     env = SchedulerEnv(env_cfg)
     model = PPO.load(model_path)
     expected_obs_dim = int(model.observation_space.shape[0])
 
-    obs, _ = env.reset()
+    obs, _ = env.reset(seed=eval_seed)
 
     total_reward = 0.0
     total_compute_time = 0.0
@@ -67,8 +84,9 @@ def evaluate_model(model_name: str, model_path: Path, env_cfg: dict) -> dict:
         if terminated or truncated:
             break
 
-    result = {
+    return {
         "model": model_name,
+        "seed": eval_seed,
         "steps": step_count,
         "avg_reward": total_reward / max(step_count, 1),
         "total_reward": total_reward,
@@ -81,10 +99,31 @@ def evaluate_model(model_name: str, model_path: Path, env_cfg: dict) -> dict:
         "avg_overload_penalty": total_overload_penalty / max(step_count, 1),
     }
 
-    print(f">>> evaluation finished: {model_name}", flush=True)
-    print(result, flush=True)
+
+def aggregate_seed_results(model_name: str, seed_results: list[dict]) -> dict:
+    aggregated = {"model": get_display_name(model_name), "eval_runs": len(seed_results)}
+
+    for metric in METRIC_KEYS:
+        values = np.array([result[metric] for result in seed_results], dtype=np.float64)
+        aggregated[metric] = float(values.mean())
+        aggregated[f"{metric}_std"] = float(values.std(ddof=0))
+
+    return aggregated
+
+
+def evaluate_model(model_name: str, model_path: Path, env_cfg: dict) -> tuple[dict, pd.DataFrame]:
+    print(f">>> evaluating model: {model_name}", flush=True)
+    print(f">>> model path: {model_path}", flush=True)
+
+    seed_results = []
+    for eval_seed in EVAL_SEEDS:
+        print(f">>> seed run: {model_name} / seed={eval_seed}", flush=True)
+        seed_results.append(evaluate_single_seed(model_name, model_path, env_cfg, eval_seed))
+
+    summary = aggregate_seed_results(model_name, seed_results)
+    print(f">>> evaluation summary: {summary}", flush=True)
     print(flush=True)
-    return result
+    return summary, pd.DataFrame(seed_results)
 
 
 def build_model_candidates(scoring_cfg: dict, naive_cfg: dict | None) -> dict[str, Path]:
@@ -103,6 +142,7 @@ def build_model_candidates(scoring_cfg: dict, naive_cfg: dict | None) -> dict[st
 
 def main():
     print(">>> compare_ppo_models.py started", flush=True)
+    print(f">>> evaluation seeds: {EVAL_SEEDS}", flush=True)
 
     env_cfg = load_yaml("configs/env.yaml")
     train_cfg = load_yaml("configs/train_scoring_gat.yaml")
@@ -111,7 +151,8 @@ def main():
     output_dir = Path("outputs/results")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    results = []
+    summary_results = []
+    per_seed_frames = []
     models_to_compare = build_model_candidates(train_cfg, naive_cfg)
 
     for model_name, model_path in models_to_compare.items():
@@ -120,26 +161,31 @@ def main():
             continue
 
         try:
-            result = evaluate_model(model_name, model_path, env_cfg)
-            result["model"] = get_display_name(model_name)
-            results.append(result)
+            summary, seed_df = evaluate_model(model_name, model_path, env_cfg)
+            summary_results.append(summary)
+            per_seed_frames.append(seed_df)
         except Exception as exc:
             print(f">>> skipping {model_name}, evaluation failed: {exc}", flush=True)
 
-    if not results:
+    if not summary_results:
         raise FileNotFoundError(
             "No comparable model files were found. Train the models first and verify the paths."
         )
 
-    df = pd.DataFrame(results).sort_values(by="avg_reward", ascending=False)
+    summary_df = pd.DataFrame(summary_results).sort_values(by="avg_reward", ascending=False)
+    per_seed_df = pd.concat(per_seed_frames, ignore_index=True)
+    per_seed_df["model"] = per_seed_df["model"].map(get_display_name)
 
-    print("=== PPO comparison results ===", flush=True)
-    print(df.to_string(index=False), flush=True)
+    print("=== PPO comparison results (mean/std) ===", flush=True)
+    print(summary_df.to_string(index=False), flush=True)
 
-    csv_path = output_dir / "ppo_gat_comparison.csv"
-    df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+    summary_csv_path = output_dir / "ppo_gat_comparison.csv"
+    per_seed_csv_path = output_dir / "ppo_gat_comparison_per_seed.csv"
+    summary_df.to_csv(summary_csv_path, index=False, encoding="utf-8-sig")
+    per_seed_df.to_csv(per_seed_csv_path, index=False, encoding="utf-8-sig")
 
-    print(f"\n>>> results saved to: {csv_path}", flush=True)
+    print(f"\n>>> summary results saved to: {summary_csv_path}", flush=True)
+    print(f">>> per-seed results saved to: {per_seed_csv_path}", flush=True)
 
 
 if __name__ == "__main__":

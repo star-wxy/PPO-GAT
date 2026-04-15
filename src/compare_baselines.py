@@ -1,20 +1,35 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from stable_baselines3 import PPO
 
 from src.baselines.greedy_cpu import GreedyCPUPolicy
 from src.baselines.random_policy import RandomPolicy
 from src.baselines.round_robin import RoundRobinPolicy
-from src.envs.scheduler_env import SchedulerEnv
+from src.envs.multi_robot_scheduler_env import SchedulerEnv
 from src.utils.config import load_yaml
 from src.utils.display_names import get_display_name
 
 
-def evaluate_policy(policy_name: str, policy, env: SchedulerEnv, max_steps: int) -> dict:
-    print(f">>> evaluating policy: {policy_name}", flush=True)
+EVAL_SEEDS = [11, 23, 37, 41, 53]
+METRIC_KEYS = [
+    "steps",
+    "avg_reward",
+    "total_reward",
+    "avg_compute_time",
+    "avg_queue_delay",
+    "avg_network_latency",
+    "avg_total_time",
+    "avg_energy_cost",
+    "avg_deadline_penalty",
+    "avg_overload_penalty",
+]
 
-    obs, _ = env.reset()
+
+def evaluate_single_seed(policy_name: str, policy, env_cfg: dict, max_steps: int, eval_seed: int) -> dict:
+    env = SchedulerEnv(env_cfg)
+    obs, _ = env.reset(seed=eval_seed)
 
     total_reward = 0.0
     total_compute_time = 0.0
@@ -48,8 +63,9 @@ def evaluate_policy(policy_name: str, policy, env: SchedulerEnv, max_steps: int)
         if terminated or truncated:
             break
 
-    result = {
-        "policy": get_display_name(policy_name),
+    return {
+        "policy": policy_name,
+        "seed": eval_seed,
         "steps": step_count,
         "avg_reward": total_reward / max(step_count, 1),
         "total_reward": total_reward,
@@ -62,51 +78,85 @@ def evaluate_policy(policy_name: str, policy, env: SchedulerEnv, max_steps: int)
         "avg_overload_penalty": total_overload_penalty / max(step_count, 1),
     }
 
-    print(f">>> evaluation finished: {policy_name} -> {result}", flush=True)
-    return result
+
+def aggregate_seed_results(policy_name: str, seed_results: list[dict]) -> dict:
+    aggregated = {"policy": get_display_name(policy_name), "eval_runs": len(seed_results)}
+
+    for metric in METRIC_KEYS:
+        values = np.array([result[metric] for result in seed_results], dtype=np.float64)
+        aggregated[metric] = float(values.mean())
+        aggregated[f"{metric}_std"] = float(values.std(ddof=0))
+
+    return aggregated
+
+
+def evaluate_policy(policy_name: str, policy, env_cfg: dict, max_steps: int) -> tuple[dict, pd.DataFrame]:
+    print(f">>> evaluating policy: {policy_name}", flush=True)
+
+    seed_results = []
+    for eval_seed in EVAL_SEEDS:
+        print(f">>> seed run: {policy_name} / seed={eval_seed}", flush=True)
+        seed_results.append(evaluate_single_seed(policy_name, policy, env_cfg, max_steps, eval_seed))
+
+    summary = aggregate_seed_results(policy_name, seed_results)
+    print(f">>> evaluation summary: {summary}", flush=True)
+    print(flush=True)
+    return summary, pd.DataFrame(seed_results)
 
 
 def main():
     print(">>> compare_baselines.py started", flush=True)
+    print(f">>> evaluation seeds: {EVAL_SEEDS}", flush=True)
 
     env_cfg = load_yaml("configs/env.yaml")
     train_cfg = load_yaml("configs/train_plain_ppo.yaml")
     print(">>> configs loaded", flush=True)
 
     max_steps = env_cfg["max_steps"]
-    results = []
+    summary_results = []
+    per_seed_frames = []
 
     model_path = Path(train_cfg["checkpoint_dir"]) / train_cfg["model_name"]
     print(f">>> PPO model path: {model_path}", flush=True)
     print(f">>> model file exists: {model_path.with_suffix('.zip').exists()}", flush=True)
 
-    ppo_env = SchedulerEnv(env_cfg)
     ppo_model = PPO.load(model_path)
-    results.append(evaluate_policy("ppo", ppo_model, ppo_env, max_steps))
+    ppo_summary, ppo_seed_df = evaluate_policy("ppo", ppo_model, env_cfg, max_steps)
+    summary_results.append(ppo_summary)
+    per_seed_frames.append(ppo_seed_df)
 
-    random_env = SchedulerEnv(env_cfg)
     random_policy = RandomPolicy(action_dim=env_cfg["num_nodes"])
-    results.append(evaluate_policy("random", random_policy, random_env, max_steps))
+    random_summary, random_seed_df = evaluate_policy("random", random_policy, env_cfg, max_steps)
+    summary_results.append(random_summary)
+    per_seed_frames.append(random_seed_df)
 
-    rr_env = SchedulerEnv(env_cfg)
     rr_policy = RoundRobinPolicy(action_dim=env_cfg["num_nodes"])
-    results.append(evaluate_policy("round_robin", rr_policy, rr_env, max_steps))
+    rr_summary, rr_seed_df = evaluate_policy("round_robin", rr_policy, env_cfg, max_steps)
+    summary_results.append(rr_summary)
+    per_seed_frames.append(rr_seed_df)
 
-    greedy_env = SchedulerEnv(env_cfg)
     greedy_policy = GreedyCPUPolicy(num_nodes=env_cfg["num_nodes"])
-    results.append(evaluate_policy("greedy_cpu", greedy_policy, greedy_env, max_steps))
+    greedy_summary, greedy_seed_df = evaluate_policy("greedy_cpu", greedy_policy, env_cfg, max_steps)
+    summary_results.append(greedy_summary)
+    per_seed_frames.append(greedy_seed_df)
 
-    df = pd.DataFrame(results)
-    print("\n=== baseline comparison results ===", flush=True)
-    print(df.to_string(index=False), flush=True)
+    summary_df = pd.DataFrame(summary_results).sort_values(by="avg_reward", ascending=False)
+    per_seed_df = pd.concat(per_seed_frames, ignore_index=True)
+    per_seed_df["policy"] = per_seed_df["policy"].map(get_display_name)
+
+    print("\n=== baseline comparison results (mean/std) ===", flush=True)
+    print(summary_df.to_string(index=False), flush=True)
 
     output_dir = Path("outputs/results")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    csv_path = output_dir / "policy_baseline_comparison.csv"
-    df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+    summary_csv_path = output_dir / "policy_baseline_comparison.csv"
+    per_seed_csv_path = output_dir / "policy_baseline_comparison_per_seed.csv"
+    summary_df.to_csv(summary_csv_path, index=False, encoding="utf-8-sig")
+    per_seed_df.to_csv(per_seed_csv_path, index=False, encoding="utf-8-sig")
 
-    print(f"\n>>> results saved to: {csv_path}", flush=True)
+    print(f"\n>>> summary results saved to: {summary_csv_path}", flush=True)
+    print(f">>> per-seed results saved to: {per_seed_csv_path}", flush=True)
 
 
 if __name__ == "__main__":

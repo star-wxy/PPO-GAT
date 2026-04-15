@@ -5,7 +5,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.monitor import Monitor
 
-from src.envs.scheduler_env import SchedulerEnv
+from src.envs.multi_robot_scheduler_env import SchedulerEnv
 from src.utils.config import load_yaml
 from src.utils.seed import set_seed
 

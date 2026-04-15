@@ -18,6 +18,7 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         max_task_deadline: float,
         max_task_priority: int,
         max_robot_energy: float,
+        max_robot_local_cpu: float,
         features_dim: int = 128,
         hidden_dim: int = 32,
         gat_heads: int = 4,
@@ -28,7 +29,7 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         self.num_nodes = num_nodes
         self.num_robots = num_robots
         self.total_graph_nodes = 1 + num_nodes + num_robots
-        self.node_feat_dim = 16
+        self.node_feat_dim = 17
         self.hidden_dim = hidden_dim
         self.obs_dim = int(observation_space.shape[0])
 
@@ -45,6 +46,7 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         self.max_task_deadline = max(float(max_task_deadline), 1.0)
         self.max_task_priority = max(float(max_task_priority), 1.0)
         self.max_robot_energy = max(float(max_robot_energy), 1.0)
+        self.max_robot_local_cpu = max(float(max_robot_local_cpu), 1.0)
         self.max_node_cpu = max(float(cpu_tensor.max().item()), 1.0)
         self.max_latency = max(float(latency_tensor.max().item()), 1e-3)
         self.max_energy_factor = max(float(energy_tensor.max().item()), 1.0)
@@ -86,7 +88,7 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
             nn.SiLU(),
         )
 
-        node_input_dim = hidden_dim * 3 + 7 + 13
+        node_input_dim = hidden_dim * 3 + 7 + 15
         self.node_scorer = nn.Sequential(
             nn.Linear(node_input_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
@@ -150,9 +152,15 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         idx += 1
         task_priority = observations[:, idx : idx + 1]
         idx += 1
+        task_type_norm = observations[:, idx : idx + 1]
+        idx += 1
         current_robot_id_norm = observations[:, idx : idx + 1]
         idx += 1
         current_robot_energy = observations[:, idx : idx + 1]
+        idx += 1
+        current_robot_local_cpu = observations[:, idx : idx + 1]
+        idx += 1
+        current_robot_queue_norm = observations[:, idx : idx + 1]
         idx += 1
         node_free_cpu = observations[:, idx : idx + self.num_nodes]
         idx += self.num_nodes
@@ -161,16 +169,25 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         node_load_ratio = observations[:, idx : idx + self.num_nodes]
         idx += self.num_nodes
         robot_energy = observations[:, idx : idx + self.num_robots]
+        idx += self.num_robots
+        robot_local_cpu = observations[:, idx : idx + self.num_robots]
+        idx += self.num_robots
+        robot_queue_norm = observations[:, idx : idx + self.num_robots]
         return (
             task_size,
             task_deadline,
             task_priority,
+            task_type_norm,
             current_robot_id_norm,
             current_robot_energy,
+            current_robot_local_cpu,
+            current_robot_queue_norm,
             node_free_cpu,
             node_latency,
             node_load_ratio,
             robot_energy,
+            robot_local_cpu,
+            robot_queue_norm,
         )
 
     def _normalize_observations(self, observations: torch.Tensor) -> torch.Tensor:
@@ -184,7 +201,13 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         idx += 1
         obs_chunks.append(observations[:, idx : idx + 1])
         idx += 1
+        obs_chunks.append(observations[:, idx : idx + 1])
+        idx += 1
         obs_chunks.append(observations[:, idx : idx + 1] / self.max_robot_energy)
+        idx += 1
+        obs_chunks.append(observations[:, idx : idx + 1] / self.max_robot_local_cpu)
+        idx += 1
+        obs_chunks.append(observations[:, idx : idx + 1].clamp(0.0, 3.0))
         idx += 1
         obs_chunks.append(observations[:, idx : idx + self.num_nodes] / self.max_node_cpu)
         idx += self.num_nodes
@@ -193,6 +216,10 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         obs_chunks.append(observations[:, idx : idx + self.num_nodes].clamp(0.0, 1.5))
         idx += self.num_nodes
         obs_chunks.append(observations[:, idx : idx + self.num_robots] / self.max_robot_energy)
+        idx += self.num_robots
+        obs_chunks.append(observations[:, idx : idx + self.num_robots] / self.max_robot_local_cpu)
+        idx += self.num_robots
+        obs_chunks.append(observations[:, idx : idx + self.num_robots].clamp(0.0, 3.0))
         return torch.cat(obs_chunks, dim=1)
 
     def _obs_to_graph(self, observations: torch.Tensor):
@@ -202,12 +229,17 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
             task_size,
             task_deadline,
             task_priority,
+            task_type_norm,
             current_robot_id_norm,
             current_robot_energy,
+            current_robot_local_cpu,
+            current_robot_queue_norm,
             node_free_cpu,
             node_latency,
             node_load_ratio,
             robot_energy,
+            robot_local_cpu,
+            robot_queue_norm,
         ) = self._parse_obs(observations)
 
         task_size_norm = task_size / self.max_task_size
@@ -215,6 +247,7 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         task_priority_norm = task_priority / self.max_task_priority
         current_robot_id_clamped = current_robot_id_norm.clamp(0.0, 1.0)
         current_robot_energy_norm = current_robot_energy / self.max_robot_energy
+        current_robot_local_cpu_norm = current_robot_local_cpu / self.max_robot_local_cpu
 
         node_capacity = self.node_cpu_capacities.to(device).unsqueeze(0).expand(batch_size, -1)
         node_latency_fixed = self.node_latencies.to(device).unsqueeze(0).expand(batch_size, -1)
@@ -225,6 +258,7 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         node_latency_norm = node_latency / self.max_latency
         node_load = node_load_ratio.clamp(0.0, 1.5)
         robot_energy_norm = robot_energy / self.max_robot_energy
+        robot_local_cpu_norm = robot_local_cpu / self.max_robot_local_cpu
 
         avg_free_norm = node_free_norm.mean(dim=1, keepdim=True)
         avg_latency_norm = node_latency_norm.mean(dim=1, keepdim=True)
@@ -232,6 +266,7 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         robot_energy_mean = robot_energy_norm.mean(dim=1, keepdim=True)
         robot_energy_min = robot_energy_norm.min(dim=1, keepdim=True).values
         robot_energy_max = robot_energy_norm.max(dim=1, keepdim=True).values
+        robot_queue_mean = robot_queue_norm.mean(dim=1, keepdim=True)
 
         predicted_compute = task_size / node_capacity.clamp_min(1e-3)
         predicted_queue = node_load * 1.5
@@ -244,16 +279,17 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
                 task_size_norm,
                 task_deadline_norm,
                 task_priority_norm,
+                task_type_norm,
                 avg_free_norm,
                 avg_load,
                 avg_latency_norm,
                 current_robot_id_norm,
                 current_robot_energy_norm,
+                current_robot_local_cpu_norm,
+                current_robot_queue_norm,
                 robot_energy_mean,
-                robot_energy_min,
-                robot_energy_max,
+                robot_queue_mean,
                 torch.ones_like(task_size_norm),
-                torch.zeros_like(task_size_norm),
                 torch.zeros_like(task_size_norm),
                 torch.zeros_like(task_size_norm),
                 torch.zeros_like(task_size_norm),
@@ -266,16 +302,17 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
                 task_size_norm.expand(-1, self.num_nodes).unsqueeze(-1),
                 task_deadline_norm.expand(-1, self.num_nodes).unsqueeze(-1),
                 task_priority_norm.expand(-1, self.num_nodes).unsqueeze(-1),
+                task_type_norm.expand(-1, self.num_nodes).unsqueeze(-1),
                 node_free_norm.unsqueeze(-1),
                 node_load.unsqueeze(-1),
                 node_latency_norm.unsqueeze(-1),
                 (node_capacity / self.max_node_cpu).unsqueeze(-1),
-                (node_energy_factor / self.max_energy_factor).unsqueeze(-1),
                 task_to_capacity.unsqueeze(-1),
                 slack.unsqueeze(-1),
                 current_robot_id_norm.expand(-1, self.num_nodes).unsqueeze(-1),
                 current_robot_energy_norm.expand(-1, self.num_nodes).unsqueeze(-1),
-                torch.zeros(batch_size, self.num_nodes, 1, device=device),
+                current_robot_local_cpu_norm.expand(-1, self.num_nodes).unsqueeze(-1),
+                current_robot_queue_norm.expand(-1, self.num_nodes).unsqueeze(-1),
                 torch.ones(batch_size, self.num_nodes, 1, device=device),
                 torch.zeros(batch_size, self.num_nodes, 1, device=device),
                 (node_energy_factor / self.max_energy_factor).unsqueeze(-1),
@@ -288,18 +325,21 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
                 task_size_norm.expand(-1, self.num_robots).unsqueeze(-1),
                 task_deadline_norm.expand(-1, self.num_robots).unsqueeze(-1),
                 task_priority_norm.expand(-1, self.num_robots).unsqueeze(-1),
+                task_type_norm.expand(-1, self.num_robots).unsqueeze(-1),
                 avg_free_norm.expand(-1, self.num_robots).unsqueeze(-1),
                 avg_load.expand(-1, self.num_robots).unsqueeze(-1),
                 avg_latency_norm.expand(-1, self.num_robots).unsqueeze(-1),
                 current_robot_id_norm.expand(-1, self.num_robots).unsqueeze(-1),
-                current_robot_energy_norm.expand(-1, self.num_robots).unsqueeze(-1),
-                torch.zeros(batch_size, self.num_robots, 1, device=device),
                 robot_energy_norm.unsqueeze(-1),
-                torch.zeros(batch_size, self.num_robots, 1, device=device),
-                torch.zeros(batch_size, self.num_robots, 1, device=device),
-                torch.zeros(batch_size, self.num_robots, 1, device=device),
+                robot_local_cpu_norm.unsqueeze(-1),
+                robot_queue_norm.unsqueeze(-1),
+                current_robot_queue_norm.expand(-1, self.num_robots).unsqueeze(-1),
+                (torch.arange(self.num_robots, device=device).view(1, -1, 1) == (
+                    current_robot_id_clamped * max(self.num_robots - 1, 1)
+                ).round().view(-1, 1, 1)).float(),
                 torch.zeros(batch_size, self.num_robots, 1, device=device),
                 torch.ones(batch_size, self.num_robots, 1, device=device),
+                torch.zeros(batch_size, self.num_robots, 1, device=device),
                 torch.zeros(batch_size, self.num_robots, 1, device=device),
             ],
             dim=-1,
@@ -337,11 +377,13 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
                 task_size_norm.expand(-1, self.num_nodes),
                 task_deadline_norm.expand(-1, self.num_nodes),
                 task_priority_norm.expand(-1, self.num_nodes),
+                task_type_norm.expand(-1, self.num_nodes),
                 current_robot_id_clamped.expand(-1, self.num_nodes),
                 current_robot_energy_norm.expand(-1, self.num_nodes),
+                current_robot_local_cpu_norm.expand(-1, self.num_nodes),
+                current_robot_queue_norm.expand(-1, self.num_nodes),
                 task_to_capacity,
                 overload_margin,
-                slack,
             ],
             dim=-1,
         )
@@ -389,7 +431,11 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         task_to_capacity = heuristics[..., 3]
         overload_margin = heuristics[..., 4]
         slack = heuristics[..., 6]
-        current_robot_pos = local_raw[..., 8]
+        current_robot_pos = local_raw[..., 9]
+        current_robot_queue = local_raw[..., 12]
+        task_deadline_norm = local_raw[..., 6]
+        energy_factor = local_raw[..., 4]
+        local_cpu_signal = local_raw[..., 11]
         node_position = torch.linspace(
             0.0,
             1.0,
@@ -400,19 +446,49 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         queue_pressure = node_load * (1.0 + task_to_capacity)
         overload_risk = torch.relu(-overload_margin)
         deadline_risk = torch.relu(-slack)
-        energy_proxy = local_raw[..., 4] * (0.55 + 0.45 * local_raw[..., 5])
+        energy_proxy = energy_factor * (0.55 + 0.45 * local_raw[..., 5])
+        backlog_pressure = current_robot_queue * (1.0 + 0.6 * deadline_risk)
+        remote_cost = distance_norm * (0.8 + 0.6 * current_robot_queue + 0.4 * deadline_risk)
+        near_edge_bonus = (1.0 - distance_norm) * (0.45 + 0.35 * local_cpu_signal)
+        cloud_risk = node_latency * energy_factor * (0.9 + 0.8 * deadline_risk + 0.5 * backlog_pressure)
+        service_headroom = node_free - 0.55 * task_to_capacity - 0.65 * node_load
+        cloud_mask = (node_latency > 0.72).float()
+        edge_mask = 1.0 - cloud_mask
+        edge_load_mean = (node_load * edge_mask).sum(dim=1, keepdim=True) / edge_mask.sum(dim=1, keepdim=True).clamp_min(1.0)
+        edge_headroom_mean = (service_headroom * edge_mask).sum(dim=1, keepdim=True) / edge_mask.sum(dim=1, keepdim=True).clamp_min(1.0)
+        edge_congestion = torch.relu(edge_load_mean - 0.42)
+        edge_shortage = torch.relu(0.12 - edge_headroom_mean)
+        cloud_enable = cloud_mask * (edge_congestion + 0.8 * edge_shortage)
+        transmission_friendly = torch.relu(0.95 - task_to_capacity)
+        relaxed_deadline = torch.relu(task_deadline_norm - 0.55)
+        cloud_relief_bonus = cloud_enable * (
+            1.2 * transmission_friendly
+            + 0.9 * relaxed_deadline
+            + 0.7 * torch.relu(node_free - task_to_capacity)
+            + 0.45 * backlog_pressure
+        )
+        cloud_guard_penalty = cloud_mask * (
+            1.35 * torch.relu(0.18 - edge_congestion)
+            + 0.9 * torch.relu(task_to_capacity - 0.95)
+            + 0.75 * torch.relu(0.52 - task_deadline_norm)
+        )
 
         heuristic_scores = (
-            1.6 * slack
-            + 1.2 * overload_margin
-            + 0.9 * node_free
-            - 1.5 * queue_pressure
-            - 1.4 * overload_risk
-            - 1.2 * deadline_risk
-            - 0.9 * task_to_capacity
-            - 0.7 * node_latency
-            - 0.25 * distance_norm
-            - 0.18 * energy_proxy
+            1.9 * slack
+            + 1.35 * overload_margin
+            + 1.25 * service_headroom
+            + 0.65 * near_edge_bonus
+            + 0.95 * cloud_relief_bonus
+            - 1.85 * queue_pressure
+            - 1.55 * overload_risk
+            - 1.45 * deadline_risk
+            - 1.05 * task_to_capacity
+            - 0.95 * remote_cost
+            - 0.72 * node_latency
+            - 0.32 * energy_proxy
+            - 0.85 * backlog_pressure
+            - 0.9 * cloud_risk
+            - 1.1 * cloud_guard_penalty
         )
         gate = self.heuristic_gate.clamp(0.0, 1.0)
         node_scores = self.score_scale.clamp(0.8, 3.0) * (

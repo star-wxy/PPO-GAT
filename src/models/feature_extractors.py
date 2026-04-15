@@ -117,7 +117,7 @@ class GATFeatureExtractor(BaseFeaturesExtractor):
         batch_size = observations.shape[0]
         device = observations.device
         obs_dim = observations.shape[1]
-        new_obs_dim = 5 + self.num_nodes * 3 + self.num_robots
+        new_obs_dim = 8 + self.num_nodes * 3 + self.num_robots * 3
 
         idx = 0
         task_size = observations[:, idx : idx + 1]
@@ -129,13 +129,17 @@ class GATFeatureExtractor(BaseFeaturesExtractor):
         task_priority = observations[:, idx : idx + 1]
         idx += 1
 
-        current_robot_id = None
-        current_robot_energy = None
-        if obs_dim == new_obs_dim:
-            current_robot_id = observations[:, idx : idx + 1]
-            idx += 1
-            current_robot_energy = observations[:, idx : idx + 1]
-            idx += 1
+        task_type = observations[:, idx : idx + 1] if obs_dim >= new_obs_dim else torch.zeros_like(task_size)
+        idx += 1 if obs_dim >= new_obs_dim else 0
+
+        current_robot_id = observations[:, idx : idx + 1] if obs_dim >= new_obs_dim else None
+        idx += 1 if obs_dim >= new_obs_dim else 0
+        current_robot_energy = observations[:, idx : idx + 1] if obs_dim >= new_obs_dim else None
+        idx += 1 if obs_dim >= new_obs_dim else 0
+        current_robot_local_cpu = observations[:, idx : idx + 1] if obs_dim >= new_obs_dim else None
+        idx += 1 if obs_dim >= new_obs_dim else 0
+        current_robot_queue = observations[:, idx : idx + 1] if obs_dim >= new_obs_dim else None
+        idx += 1 if obs_dim >= new_obs_dim else 0
 
         node_free_cpu = observations[:, idx : idx + self.num_nodes]
         idx += self.num_nodes
@@ -149,6 +153,19 @@ class GATFeatureExtractor(BaseFeaturesExtractor):
         robot_energy = observations[:, idx : idx + self.num_robots]
         idx += self.num_robots
 
+        robot_local_cpu = (
+            observations[:, idx : idx + self.num_robots]
+            if obs_dim >= new_obs_dim
+            else torch.ones(batch_size, self.num_robots, device=device)
+        )
+        idx += self.num_robots if obs_dim >= new_obs_dim else 0
+
+        robot_queue = (
+            observations[:, idx : idx + self.num_robots]
+            if obs_dim >= new_obs_dim
+            else torch.zeros(batch_size, self.num_robots, device=device)
+        )
+
         graph_node_features = []
         batch_index = []
 
@@ -158,6 +175,12 @@ class GATFeatureExtractor(BaseFeaturesExtractor):
             avg_load = node_load_ratio[b].mean().item()
             current_robot_id_value = (
                 current_robot_id[b, 0].item() if current_robot_id is not None else 0.0
+            )
+            current_robot_local_cpu_value = (
+                current_robot_local_cpu[b, 0].item() if current_robot_local_cpu is not None else 1.0
+            )
+            current_robot_queue_value = (
+                current_robot_queue[b, 0].item() if current_robot_queue is not None else 0.0
             )
 
             # 当前任务默认对应当前活跃机器人，先取第一个机器人能量的近似
@@ -174,11 +197,11 @@ class GATFeatureExtractor(BaseFeaturesExtractor):
                     task_size[b, 0].item(),
                     task_deadline[b, 0].item(),
                     task_priority[b, 0].item(),
-                    current_robot_energy_value,
+                    task_type[b, 0].item(),
                     current_robot_id_value,
-                    avg_free,
-                    avg_latency,
-                    avg_load,
+                    current_robot_energy_value,
+                    current_robot_local_cpu_value,
+                    current_robot_queue_value,
                 ],
                 dtype=torch.float32,
                 device=device,
@@ -195,9 +218,9 @@ class GATFeatureExtractor(BaseFeaturesExtractor):
                         node_load_ratio[b, i].item(),
                         node_latency[b, i].item(),
                         task_size[b, 0].item(),
-                        task_deadline[b, 0].item(),
-                        current_robot_energy_value,
+                        task_type[b, 0].item(),
                         current_robot_id_value,
+                        current_robot_queue_value,
                         i / max(self.num_nodes - 1, 1),
                     ],
                     dtype=torch.float32,
@@ -210,12 +233,12 @@ class GATFeatureExtractor(BaseFeaturesExtractor):
                 r_node = torch.tensor(
                     [
                         robot_energy[b, r].item(),
+                        robot_local_cpu[b, r].item(),
+                        robot_queue[b, r].item(),
                         task_size[b, 0].item(),
-                        task_deadline[b, 0].item(),
+                        task_type[b, 0].item(),
                         task_priority[b, 0].item(),
-                        avg_free,
-                        avg_latency,
-                        avg_load,
+                        current_robot_id_value,
                         1.0 if r == int(round(current_robot_id_value * max(self.num_robots - 1, 1))) else 0.0,
                     ],
                     dtype=torch.float32,
