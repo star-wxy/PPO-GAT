@@ -100,8 +100,8 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
             nn.LayerNorm(hidden_dim),
             nn.SiLU(),
         )
-        self.heuristic_gate = nn.Parameter(torch.tensor(0.6))
-        self.score_scale = nn.Parameter(torch.tensor(1.8))
+        self.heuristic_gate = nn.Parameter(torch.tensor(0.85))
+        self.score_scale = nn.Parameter(torch.tensor(2.0))
 
         fusion_input_dim = num_nodes + num_nodes * hidden_dim + hidden_dim * 3
         self.fusion = nn.Sequential(
@@ -474,15 +474,15 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         )
 
         heuristic_scores = (
-            1.9 * slack
-            + 1.35 * overload_margin
-            + 1.25 * service_headroom
+            2.2 * slack
+            + 2.15 * overload_margin
+            + 2.05 * service_headroom
             + 0.65 * near_edge_bonus
             + 0.95 * cloud_relief_bonus
-            - 1.85 * queue_pressure
-            - 1.55 * overload_risk
+            - 2.45 * queue_pressure
+            - 2.35 * overload_risk
             - 1.45 * deadline_risk
-            - 1.05 * task_to_capacity
+            - 1.35 * task_to_capacity
             - 0.95 * remote_cost
             - 0.72 * node_latency
             - 0.32 * energy_proxy

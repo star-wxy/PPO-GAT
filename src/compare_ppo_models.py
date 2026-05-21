@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +23,17 @@ METRIC_KEYS = [
     "avg_deadline_penalty",
     "avg_overload_penalty",
 ]
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--env-config", default="configs/env_20r_10n.yaml")
+    parser.add_argument("--scoring-train-config", default="configs/train_scoring_gat_20r_10n.yaml")
+    parser.add_argument("--naive-train-config", default="configs/train_naive_gat_20r_10n.yaml")
+    parser.add_argument("--baseline-train-config", default="configs/train_plain_ppo_20r_10n.yaml")
+    parser.add_argument("--output-prefix", default="ppo_gat_comparison_20r_10n")
+    parser.add_argument("--use-best-model", action="store_true")
+    return parser.parse_args()
 
 
 def adapt_observation_for_model(obs: np.ndarray, expected_dim: int) -> np.ndarray:
@@ -126,16 +138,26 @@ def evaluate_model(model_name: str, model_path: Path, env_cfg: dict) -> tuple[di
     return summary, pd.DataFrame(seed_results)
 
 
-def build_model_candidates(scoring_cfg: dict, naive_cfg: dict | None) -> dict[str, Path]:
+def build_model_candidates(
+    scoring_cfg: dict,
+    naive_cfg: dict | None,
+    baseline_cfg: dict | None,
+    use_best_model: bool = False,
+) -> dict[str, Path]:
+    def model_path(cfg: dict) -> Path:
+        if use_best_model:
+            return Path(cfg["best_model_dir"]) / "best_model.zip"
+        return Path(cfg["checkpoint_dir"]) / f"{cfg['model_name']}.zip"
+
     candidates = {
-        "ppo_baseline": Path(scoring_cfg["checkpoint_dir"]) / "ppo_baseline.zip",
-        "ppo_gat_scoring": Path(scoring_cfg["checkpoint_dir"]) / f"{scoring_cfg['model_name']}.zip",
+        "ppo_gat_scoring": model_path(scoring_cfg),
     }
 
+    if baseline_cfg is not None:
+        candidates["ppo_baseline"] = model_path(baseline_cfg)
+
     if naive_cfg is not None:
-        candidates["ppo_gat_naive"] = (
-            Path(naive_cfg["checkpoint_dir"]) / f"{naive_cfg['model_name']}.zip"
-        )
+        candidates["ppo_gat_naive"] = model_path(naive_cfg)
 
     return candidates
 
@@ -144,16 +166,27 @@ def main():
     print(">>> compare_ppo_models.py started", flush=True)
     print(f">>> evaluation seeds: {EVAL_SEEDS}", flush=True)
 
-    env_cfg = load_yaml("configs/env.yaml")
-    train_cfg = load_yaml("configs/train_scoring_gat.yaml")
-    naive_cfg_path = Path("configs/train_naive_gat.yaml")
+    args = parse_args()
+    env_cfg = load_yaml(args.env_config)
+    train_cfg = load_yaml(args.scoring_train_config)
+    naive_cfg_path = Path(args.naive_train_config)
     naive_cfg = load_yaml(str(naive_cfg_path)) if naive_cfg_path.exists() else None
+    baseline_cfg_path = Path(args.baseline_train_config)
+    baseline_cfg = load_yaml(str(baseline_cfg_path)) if baseline_cfg_path.exists() else None
     output_dir = Path("outputs/results")
     output_dir.mkdir(parents=True, exist_ok=True)
+    print(f">>> env config: {args.env_config}", flush=True)
+    print(f">>> scoring train config: {args.scoring_train_config}", flush=True)
+    print(f">>> use best model: {args.use_best_model}", flush=True)
 
     summary_results = []
     per_seed_frames = []
-    models_to_compare = build_model_candidates(train_cfg, naive_cfg)
+    models_to_compare = build_model_candidates(
+        train_cfg,
+        naive_cfg,
+        baseline_cfg,
+        use_best_model=args.use_best_model,
+    )
 
     for model_name, model_path in models_to_compare.items():
         if not model_path.exists():
@@ -179,8 +212,8 @@ def main():
     print("=== PPO comparison results (mean/std) ===", flush=True)
     print(summary_df.to_string(index=False), flush=True)
 
-    summary_csv_path = output_dir / "ppo_gat_comparison.csv"
-    per_seed_csv_path = output_dir / "ppo_gat_comparison_per_seed.csv"
+    summary_csv_path = output_dir / f"{args.output_prefix}.csv"
+    per_seed_csv_path = output_dir / f"{args.output_prefix}_per_seed.csv"
     summary_df.to_csv(summary_csv_path, index=False, encoding="utf-8-sig")
     per_seed_df.to_csv(per_seed_csv_path, index=False, encoding="utf-8-sig")
 

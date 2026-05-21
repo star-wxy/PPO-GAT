@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import torch.nn as nn
@@ -10,12 +11,22 @@ from src.utils.config import load_yaml
 from src.utils.seed import set_seed
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--env-config", default="configs/env_20r_10n.yaml")
+    parser.add_argument("--train-config", default="configs/train_plain_ppo_20r_10n.yaml")
+    return parser.parse_args()
+
+
 def main():
     print(">>> train_plain_ppo.py started", flush=True)
 
-    env_cfg = load_yaml("configs/env.yaml")
-    train_cfg = load_yaml("configs/train_plain_ppo.yaml")
+    args = parse_args()
+    env_cfg = load_yaml(args.env_config)
+    train_cfg = load_yaml(args.train_config)
     print(">>> configs loaded", flush=True)
+    print(f">>> env config: {args.env_config}", flush=True)
+    print(f">>> train config: {args.train_config}", flush=True)
 
     set_seed(train_cfg["seed"])
     print(f">>> seed set to {train_cfg['seed']}", flush=True)

@@ -2,13 +2,13 @@ $env:PYTHONPATH = (Get-Location).Path
 
 $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
 if ($pythonCmd) {
-    & $pythonCmd.Source -m src.lightweight_multi_robot_validation
+    & $pythonCmd.Source -m src.lightweight_multi_robot_validation @args
     exit $LASTEXITCODE
 }
 
 $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
 if ($pyLauncher) {
-    & $pyLauncher.Source -m src.lightweight_multi_robot_validation
+    & $pyLauncher.Source -m src.lightweight_multi_robot_validation @args
     exit $LASTEXITCODE
 }
 

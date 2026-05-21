@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import pandas as pd
@@ -6,6 +7,14 @@ from stable_baselines3 import PPO
 from src.baselines.greedy_cpu import GreedyCPUPolicy
 from src.envs.multi_robot_scheduler_env import SchedulerEnv
 from src.utils.config import load_yaml
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--env-config", default="configs/env_20r_10n.yaml")
+    parser.add_argument("--train-config", default="configs/train_scoring_gat_20r_10n.yaml")
+    parser.add_argument("--output-prefix", default="lightweight_multi_robot_validation_20r_10n")
+    return parser.parse_args()
 
 
 def load_policy(checkpoint_path: Path):
@@ -24,8 +33,11 @@ def load_policy(checkpoint_path: Path):
 def main():
     print(">>> lightweight_multi_robot_validation.py started", flush=True)
 
-    env_cfg = load_yaml("configs/env.yaml")
-    train_cfg = load_yaml("configs/train_scoring_gat.yaml")
+    args = parse_args()
+    env_cfg = load_yaml(args.env_config)
+    train_cfg = load_yaml(args.train_config)
+    print(f">>> env config: {args.env_config}", flush=True)
+    print(f">>> train config: {args.train_config}", flush=True)
 
     checkpoint_path = Path(train_cfg["checkpoint_dir"]) / f"{train_cfg['model_name']}.zip"
     policy_name, model = load_policy(checkpoint_path)
@@ -141,8 +153,8 @@ def main():
 
     output_dir = Path("outputs/results")
     output_dir.mkdir(parents=True, exist_ok=True)
-    events_path = output_dir / "lightweight_multi_robot_validation_events.csv"
-    summary_path = output_dir / "lightweight_multi_robot_validation_summary.csv"
+    events_path = output_dir / f"{args.output_prefix}_events.csv"
+    summary_path = output_dir / f"{args.output_prefix}_summary.csv"
     events_df.to_csv(events_path, index=False, encoding="utf-8-sig")
     summary_df.to_csv(summary_path, index=False, encoding="utf-8-sig")
 

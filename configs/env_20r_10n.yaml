@@ -1,0 +1,214 @@
+num_robots: 20
+num_nodes: 10
+max_steps: 200
+
+robot:
+  init_energy: 120.0
+  local_cpu_min: 1.4
+  local_cpu_max: 4.2
+  task_rate_min: 0.35
+  task_rate_max: 0.85
+  task_arrival_base: 0.015
+  task_arrival_scale: 0.065
+  task_arrival_cap: 0.12
+  max_new_tasks_per_step: 2
+  task_size_bias_min: 0.8
+  task_size_bias_max: 1.25
+  deadline_bias_min: 0.85
+  deadline_bias_max: 1.25
+
+reward:
+  backlog_penalty_mode: log
+  backlog_penalty_coef: 1.15
+  backlog_soft_limit: 30
+  backlog_delta_penalty_coef: 0.25
+  total_time_penalty_coef: 2.7
+  energy_penalty_coef: 1.55
+  deadline_penalty_coef: 2.6
+  overload_penalty_coef: 1.25
+  topology_penalty_coef: 0.65
+  robot_queue_penalty_coef: 0.24
+  node_pressure_penalty_coef: 0.55
+
+robots:
+  - home_node_id: 0
+    local_cpu: 3.8
+    task_rate: 0.78
+    task_size_bias: 0.85
+    deadline_bias: 0.95
+  - home_node_id: 0
+    local_cpu: 3.2
+    task_rate: 0.72
+    task_size_bias: 0.95
+    deadline_bias: 1.0
+  - home_node_id: 1
+    local_cpu: 2.8
+    task_rate: 0.68
+    task_size_bias: 1.0
+    deadline_bias: 1.05
+  - home_node_id: 1
+    local_cpu: 2.5
+    task_rate: 0.62
+    task_size_bias: 1.1
+    deadline_bias: 1.1
+  - home_node_id: 2
+    local_cpu: 3.5
+    task_rate: 0.76
+    task_size_bias: 0.9
+    deadline_bias: 0.95
+  - home_node_id: 2
+    local_cpu: 2.1
+    task_rate: 0.58
+    task_size_bias: 1.2
+    deadline_bias: 1.15
+  - home_node_id: 3
+    local_cpu: 3.0
+    task_rate: 0.66
+    task_size_bias: 1.05
+    deadline_bias: 1.0
+  - home_node_id: 3
+    local_cpu: 1.9
+    task_rate: 0.52
+    task_size_bias: 1.25
+    deadline_bias: 1.2
+  - home_node_id: 4
+    local_cpu: 4.0
+    task_rate: 0.82
+    task_size_bias: 0.85
+    deadline_bias: 0.9
+  - home_node_id: 4
+    local_cpu: 2.6
+    task_rate: 0.64
+    task_size_bias: 1.1
+    deadline_bias: 1.05
+  - home_node_id: 5
+    local_cpu: 3.4
+    task_rate: 0.74
+    task_size_bias: 0.95
+    deadline_bias: 1.0
+  - home_node_id: 5
+    local_cpu: 2.2
+    task_rate: 0.55
+    task_size_bias: 1.18
+    deadline_bias: 1.15
+  - home_node_id: 6
+    local_cpu: 3.1
+    task_rate: 0.7
+    task_size_bias: 1.0
+    deadline_bias: 1.0
+  - home_node_id: 6
+    local_cpu: 1.8
+    task_rate: 0.48
+    task_size_bias: 1.25
+    deadline_bias: 1.25
+  - home_node_id: 7
+    local_cpu: 3.6
+    task_rate: 0.79
+    task_size_bias: 0.9
+    deadline_bias: 0.95
+  - home_node_id: 7
+    local_cpu: 2.4
+    task_rate: 0.6
+    task_size_bias: 1.12
+    deadline_bias: 1.1
+  - home_node_id: 8
+    local_cpu: 3.3
+    task_rate: 0.73
+    task_size_bias: 1.0
+    deadline_bias: 1.0
+  - home_node_id: 8
+    local_cpu: 2.0
+    task_rate: 0.5
+    task_size_bias: 1.22
+    deadline_bias: 1.2
+  - home_node_id: 9
+    local_cpu: 3.9
+    task_rate: 0.84
+    task_size_bias: 0.88
+    deadline_bias: 0.92
+  - home_node_id: 9
+    local_cpu: 2.7
+    task_rate: 0.65
+    task_size_bias: 1.08
+    deadline_bias: 1.08
+
+nodes:
+  - type: local
+    cpu_capacity: 4.0
+    latency: 0.04
+    energy_factor: 0.78
+  - type: local
+    cpu_capacity: 4.8
+    latency: 0.05
+    energy_factor: 0.82
+  - type: edge
+    cpu_capacity: 8.0
+    latency: 0.16
+    energy_factor: 0.95
+  - type: edge
+    cpu_capacity: 9.0
+    latency: 0.20
+    energy_factor: 1.0
+  - type: edge
+    cpu_capacity: 10.5
+    latency: 0.24
+    energy_factor: 1.05
+  - type: edge
+    cpu_capacity: 12.0
+    latency: 0.28
+    energy_factor: 1.08
+  - type: edge
+    cpu_capacity: 13.5
+    latency: 0.34
+    energy_factor: 1.12
+  - type: regional
+    cpu_capacity: 16.0
+    latency: 0.45
+    energy_factor: 1.25
+  - type: regional
+    cpu_capacity: 18.0
+    latency: 0.58
+    energy_factor: 1.35
+  - type: cloud
+    cpu_capacity: 28.0
+    latency: 0.85
+    energy_factor: 1.55
+
+task:
+  size_min: 1.0
+  size_max: 10.0
+  deadline_min: 3
+  deadline_max: 9
+  priority_levels: 3
+
+task_types:
+  - name: navigation
+    size_scale: 0.75
+    deadline_scale: 0.95
+    priority_bias: 0
+    local_compute_scale: 0.65
+    transmission_scale: 0.55
+  - name: perception
+    size_scale: 1.15
+    deadline_scale: 1.0
+    priority_bias: 1
+    local_compute_scale: 1.05
+    transmission_scale: 0.95
+  - name: mapping
+    size_scale: 1.35
+    deadline_scale: 1.2
+    priority_bias: 1
+    local_compute_scale: 1.25
+    transmission_scale: 1.12
+  - name: manipulation
+    size_scale: 1.0
+    deadline_scale: 0.95
+    priority_bias: 2
+    local_compute_scale: 0.95
+    transmission_scale: 0.75
+  - name: inspection
+    size_scale: 0.9
+    deadline_scale: 0.9
+    priority_bias: 1
+    local_compute_scale: 0.85
+    transmission_scale: 0.7

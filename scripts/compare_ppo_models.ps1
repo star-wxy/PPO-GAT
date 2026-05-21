@@ -2,13 +2,13 @@ $env:PYTHONPATH = (Get-Location).Path
 
 $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
 if ($pythonCmd) {
-    & $pythonCmd.Source -m src.compare_ppo_models
+    & $pythonCmd.Source -m src.compare_ppo_models @args
     exit $LASTEXITCODE
 }
 
 $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
 if ($pyLauncher) {
-    & $pyLauncher.Source -m src.compare_ppo_models
+    & $pyLauncher.Source -m src.compare_ppo_models @args
     exit $LASTEXITCODE
 }
 

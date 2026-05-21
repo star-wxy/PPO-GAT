@@ -24,6 +24,7 @@ class SchedulerEnv(gym.Env):
         self.robot_profiles = env_config.get("robots", [])
         self.node_configs = env_config["nodes"]
         self.task_type_configs = env_config.get("task_types", [])
+        self.reward_cfg = env_config.get("reward", {})
 
         self.task_size_min = env_config["task"]["size_min"]
         self.task_size_max = env_config["task"]["size_max"]
@@ -57,6 +58,30 @@ class SchedulerEnv(gym.Env):
             + [self.robot_cfg.get("local_cpu_max", 3.5)]
         )
         self.max_robot_queue = max(3, self.num_robots * 2)
+        self.task_arrival_base = float(self.robot_cfg.get("task_arrival_base", 0.35))
+        self.task_arrival_scale = float(self.robot_cfg.get("task_arrival_scale", 0.35))
+        self.task_arrival_cap = float(self.robot_cfg.get("task_arrival_cap", 0.95))
+        self.max_new_tasks_per_step = self.robot_cfg.get("max_new_tasks_per_step")
+        self.max_new_tasks_per_step = (
+            None
+            if self.max_new_tasks_per_step is None
+            else int(self.max_new_tasks_per_step)
+        )
+        self.backlog_penalty_mode = str(self.reward_cfg.get("backlog_penalty_mode", "linear"))
+        self.backlog_penalty_coef = float(self.reward_cfg.get("backlog_penalty_coef", 0.09))
+        self.backlog_soft_limit = int(self.reward_cfg.get("backlog_soft_limit", self.num_robots))
+        self.backlog_delta_penalty_coef = float(
+            self.reward_cfg.get("backlog_delta_penalty_coef", 0.0)
+        )
+        self.total_time_penalty_coef = float(self.reward_cfg.get("total_time_penalty_coef", 2.7))
+        self.energy_penalty_coef = float(self.reward_cfg.get("energy_penalty_coef", 1.05))
+        self.deadline_penalty_coef = float(self.reward_cfg.get("deadline_penalty_coef", 2.4))
+        self.overload_penalty_coef = float(self.reward_cfg.get("overload_penalty_coef", 2.6))
+        self.topology_penalty_coef = float(self.reward_cfg.get("topology_penalty_coef", 0.45))
+        self.robot_queue_penalty_coef = float(self.reward_cfg.get("robot_queue_penalty_coef", 0.32))
+        self.node_pressure_penalty_coef = float(
+            self.reward_cfg.get("node_pressure_penalty_coef", 0.85)
+        )
         self.cloud_node_ids = [
             idx for idx, cfg in enumerate(self.node_configs) if cfg.get("type") == "cloud"
         ]
@@ -200,7 +225,16 @@ class SchedulerEnv(gym.Env):
     def _enqueue_new_tasks(self, ensure_at_least_one: bool = False) -> int:
         created_count = 0
         for robot in self.robots:
-            task_probability = min(0.95, 0.35 + 0.35 * robot.task_rate)
+            if (
+                self.max_new_tasks_per_step is not None
+                and created_count >= self.max_new_tasks_per_step
+            ):
+                break
+
+            task_probability = min(
+                self.task_arrival_cap,
+                self.task_arrival_base + self.task_arrival_scale * robot.task_rate,
+            )
             if random.random() <= task_probability:
                 task = self._generate_task_for_robot(robot.robot_id)
                 robot.task_queue.append(task)
@@ -216,12 +250,23 @@ class SchedulerEnv(gym.Env):
 
         return created_count
 
+    def _backlog_penalty(self, backlog_size: int) -> float:
+        backlog_excess = max(backlog_size - self.backlog_soft_limit, 0)
+        if backlog_excess <= 0:
+            return 0.0
+
+        if self.backlog_penalty_mode == "log":
+            return self.backlog_penalty_coef * float(np.log1p(backlog_excess))
+        if self.backlog_penalty_mode == "sqrt":
+            return self.backlog_penalty_coef * float(np.sqrt(backlog_excess))
+        return self.backlog_penalty_coef * float(backlog_excess)
+
     def _current_backlog_size(self) -> int:
         return len(self.pending_tasks) + (1 if self.current_task is not None else 0)
 
     def _select_next_task(self) -> None:
         if not self.pending_tasks:
-            self._enqueue_new_tasks()
+            self._enqueue_new_tasks(ensure_at_least_one=True)
 
         if not self.pending_tasks:
             self.current_task = None
@@ -373,16 +418,20 @@ class SchedulerEnv(gym.Env):
 
         reward = (
             8.0
-            - 2.7 * total_time
-            - 1.05 * energy_cost
-            - priority_weight * 2.4 * deadline_penalty
-            - 2.6 * overload_penalty
-            - 0.45 * topology_distance
-            - 0.32 * current_robot.queue_length
+            - self.total_time_penalty_coef * total_time
+            - self.energy_penalty_coef * energy_cost
+            - priority_weight * self.deadline_penalty_coef * deadline_penalty
+            - self.overload_penalty_coef * overload_penalty
+            - self.topology_penalty_coef * topology_distance
+            - self.robot_queue_penalty_coef * current_robot.queue_length
         )
 
-        system_backlog_penalty = 0.09 * max(backlog_before_step - self.num_robots, 0)
-        node_pressure_penalty = 0.85 * chosen_node.load_ratio * (0.8 + 0.5 * current_task.transmission_demand)
+        system_backlog_penalty = self._backlog_penalty(backlog_before_step)
+        node_pressure_penalty = (
+            self.node_pressure_penalty_coef
+            * chosen_node.load_ratio
+            * (0.8 + 0.5 * current_task.transmission_demand)
+        )
         remote_cloud_penalty = 0.0
         if chosen_node.node_type == "cloud":
             remote_cloud_penalty = 0.35 + 0.18 * topology_distance + 0.12 * current_task.transmission_demand
@@ -445,6 +494,8 @@ class SchedulerEnv(gym.Env):
 
         backlog_after_step = self._current_backlog_size()
         backlog_delta = backlog_after_step - backlog_before_step
+        backlog_delta_penalty = self.backlog_delta_penalty_coef * max(backlog_delta, 0)
+        reward -= backlog_delta_penalty
 
         info = self._get_info()
         info["reward"] = float(reward)
@@ -476,6 +527,7 @@ class SchedulerEnv(gym.Env):
         info["generated_tasks_total"] = int(self.generated_tasks_total)
         info["completed_tasks_total"] = int(self.completed_tasks_total)
         info["system_backlog_penalty"] = float(system_backlog_penalty)
+        info["backlog_delta_penalty"] = float(backlog_delta_penalty)
         info["node_pressure_penalty"] = float(node_pressure_penalty)
         info["remote_cloud_penalty"] = float(remote_cloud_penalty)
         info["congestion_relief_bonus"] = float(congestion_relief_bonus)

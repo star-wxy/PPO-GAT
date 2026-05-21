@@ -2,13 +2,13 @@ $env:PYTHONPATH = (Get-Location).Path
 
 $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
 if ($pythonCmd) {
-    & $pythonCmd.Source -m src.train_plain_ppo
+    & $pythonCmd.Source -m src.train_plain_ppo @args
     exit $LASTEXITCODE
 }
 
 $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
 if ($pyLauncher) {
-    & $pyLauncher.Source -m src.train_plain_ppo
+    & $pyLauncher.Source -m src.train_plain_ppo @args
     exit $LASTEXITCODE
 }
 

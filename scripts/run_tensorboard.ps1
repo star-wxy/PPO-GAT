@@ -1,9 +1,9 @@
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 
-$baselineLogDir = Join-Path $projectRoot "outputs/tensorboard_baseline"
-$naiveLogDir = Join-Path $projectRoot "outputs/tensorboard_naive"
-$scoringLogDir = Join-Path $projectRoot "outputs/tensorboard_scoring"
+$baselineLogDir = Join-Path $projectRoot "outputs/tensorboard_baseline_20r_10n"
+$naiveLogDir = Join-Path $projectRoot "outputs/tensorboard_naive_20r_10n"
+$scoringLogDir = Join-Path $projectRoot "outputs/tensorboard_scoring_20r_10n"
 
 $logdirs = @(
     "baseline=$baselineLogDir",

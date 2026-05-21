@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -25,6 +26,15 @@ METRIC_KEYS = [
     "avg_deadline_penalty",
     "avg_overload_penalty",
 ]
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--env-config", default="configs/env_20r_10n.yaml")
+    parser.add_argument("--train-config", default="configs/train_plain_ppo_20r_10n.yaml")
+    parser.add_argument("--output-prefix", default="policy_baseline_comparison_20r_10n")
+    parser.add_argument("--use-best-model", action="store_true")
+    return parser.parse_args()
 
 
 def evaluate_single_seed(policy_name: str, policy, env_cfg: dict, max_steps: int, eval_seed: int) -> dict:
@@ -104,54 +114,64 @@ def evaluate_policy(policy_name: str, policy, env_cfg: dict, max_steps: int) -> 
     return summary, pd.DataFrame(seed_results)
 
 
+def build_ppo_path(train_cfg: dict, use_best_model: bool) -> Path:
+    if use_best_model:
+        return Path(train_cfg["best_model_dir"]) / "best_model.zip"
+    return Path(train_cfg["checkpoint_dir"]) / f"{train_cfg['model_name']}.zip"
+
+
 def main():
     print(">>> compare_baselines.py started", flush=True)
     print(f">>> evaluation seeds: {EVAL_SEEDS}", flush=True)
 
-    env_cfg = load_yaml("configs/env.yaml")
-    train_cfg = load_yaml("configs/train_plain_ppo.yaml")
-    print(">>> configs loaded", flush=True)
-
+    args = parse_args()
+    env_cfg = load_yaml(args.env_config)
+    train_cfg = load_yaml(args.train_config)
     max_steps = env_cfg["max_steps"]
+
+    print(f">>> env config: {args.env_config}", flush=True)
+    print(f">>> train config: {args.train_config}", flush=True)
+    print(f">>> use best model: {args.use_best_model}", flush=True)
+
     summary_results = []
     per_seed_frames = []
 
-    model_path = Path(train_cfg["checkpoint_dir"]) / train_cfg["model_name"]
-    print(f">>> PPO model path: {model_path}", flush=True)
-    print(f">>> model file exists: {model_path.with_suffix('.zip').exists()}", flush=True)
+    model_path = build_ppo_path(train_cfg, args.use_best_model)
+    if model_path.exists():
+        print(f">>> PPO model path: {model_path}", flush=True)
+        ppo_model = PPO.load(model_path)
+        ppo_summary, ppo_seed_df = evaluate_policy("ppo", ppo_model, env_cfg, max_steps)
+        summary_results.append(ppo_summary)
+        per_seed_frames.append(ppo_seed_df)
+    else:
+        print(f">>> skipping PPO, file not found: {model_path}", flush=True)
 
-    ppo_model = PPO.load(model_path)
-    ppo_summary, ppo_seed_df = evaluate_policy("ppo", ppo_model, env_cfg, max_steps)
-    summary_results.append(ppo_summary)
-    per_seed_frames.append(ppo_seed_df)
+    policies = [
+        ("random", RandomPolicy(action_dim=env_cfg["num_nodes"])),
+        ("round_robin", RoundRobinPolicy(action_dim=env_cfg["num_nodes"])),
+        ("greedy_cpu", GreedyCPUPolicy(num_nodes=env_cfg["num_nodes"])),
+    ]
 
-    random_policy = RandomPolicy(action_dim=env_cfg["num_nodes"])
-    random_summary, random_seed_df = evaluate_policy("random", random_policy, env_cfg, max_steps)
-    summary_results.append(random_summary)
-    per_seed_frames.append(random_seed_df)
+    for policy_name, policy in policies:
+        summary, seed_df = evaluate_policy(policy_name, policy, env_cfg, max_steps)
+        summary_results.append(summary)
+        per_seed_frames.append(seed_df)
 
-    rr_policy = RoundRobinPolicy(action_dim=env_cfg["num_nodes"])
-    rr_summary, rr_seed_df = evaluate_policy("round_robin", rr_policy, env_cfg, max_steps)
-    summary_results.append(rr_summary)
-    per_seed_frames.append(rr_seed_df)
-
-    greedy_policy = GreedyCPUPolicy(num_nodes=env_cfg["num_nodes"])
-    greedy_summary, greedy_seed_df = evaluate_policy("greedy_cpu", greedy_policy, env_cfg, max_steps)
-    summary_results.append(greedy_summary)
-    per_seed_frames.append(greedy_seed_df)
+    if not summary_results:
+        raise FileNotFoundError("No policies were evaluated.")
 
     summary_df = pd.DataFrame(summary_results).sort_values(by="avg_reward", ascending=False)
     per_seed_df = pd.concat(per_seed_frames, ignore_index=True)
     per_seed_df["policy"] = per_seed_df["policy"].map(get_display_name)
 
-    print("\n=== baseline comparison results (mean/std) ===", flush=True)
+    print("\n=== policy baseline comparison results (mean/std) ===", flush=True)
     print(summary_df.to_string(index=False), flush=True)
 
     output_dir = Path("outputs/results")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    summary_csv_path = output_dir / "policy_baseline_comparison.csv"
-    per_seed_csv_path = output_dir / "policy_baseline_comparison_per_seed.csv"
+    summary_csv_path = output_dir / f"{args.output_prefix}.csv"
+    per_seed_csv_path = output_dir / f"{args.output_prefix}_per_seed.csv"
     summary_df.to_csv(summary_csv_path, index=False, encoding="utf-8-sig")
     per_seed_df.to_csv(per_seed_csv_path, index=False, encoding="utf-8-sig")
 
