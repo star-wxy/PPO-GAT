@@ -128,6 +128,66 @@ outputs/figures/metric_panel.png
 outputs/figures/metric_panel_best.png
 ```
 
+## 动态多场景奖励机制
+
+当前 `configs/env_20r_10n.yaml` 已启用上下文感知动态奖励：
+
+```yaml
+reward:
+  mode: dynamic_context
+```
+
+环境会根据以下上下文动态调整奖励权重：
+
+- 节点整体负载与热点负载
+- 当前机器人电量风险
+- 任务优先级与 deadline 紧急度
+- 通信时延风险
+- 任务计算规模
+
+动态奖励会写入 step `info`，轻量验证事件日志中也会导出相关字段，例如：
+
+```text
+inferred_scenario
+scenario_low_energy_score
+scenario_high_load_score
+scenario_emergency_score
+scenario_high_latency_score
+context_load_context
+context_energy_risk
+context_urgency_level
+context_comm_risk
+dynamic_energy_coef
+dynamic_deadline_coef
+dynamic_overload_coef
+dynamic_queue_coef
+dynamic_latency_coef
+dynamic_balance_coef
+```
+
+混合多场景配置 `configs/scenarios/mixed_context_20r_10n.yaml` 还启用了机器人充电机制：
+
+```yaml
+robot:
+  charging_enabled: true
+```
+
+当机器人电量低于 `critical_energy_ratio` 时会进入充电状态，暂停产生新任务；充到
+`recover_energy_ratio` 后恢复。日志会导出：
+
+```text
+charging_robots
+charging_started_count
+charging_recovered_count
+```
+
+如果需要退回固定奖励，只需将配置改为：
+
+```yaml
+reward:
+  mode: static
+```
+
 ## TensorBoard
 
 ```powershell

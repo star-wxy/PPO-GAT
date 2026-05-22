@@ -1,5 +1,5 @@
 num_robots: 20
-num_nodes: 10
+num_nodes: 12
 max_steps: 200
 
 robot:
@@ -16,6 +16,13 @@ robot:
   task_size_bias_max: 1.25
   deadline_bias_min: 0.85
   deadline_bias_max: 1.25
+
+network:
+  bandwidth_scale: 0.45
+  transfer_hop_latency: 0.18
+  transfer_demand_latency: 0.12
+  transfer_hop_energy: 0.20
+  transfer_demand_energy: 0.11
 
 reward:
   mode: dynamic_context
@@ -142,44 +149,52 @@ robots:
 nodes:
   - type: local
     cpu_capacity: 4.0
-    latency: 0.04
+    latency: 0.08
     energy_factor: 0.78
   - type: local
     cpu_capacity: 4.8
-    latency: 0.05
+    latency: 0.10
     energy_factor: 0.82
   - type: edge
     cpu_capacity: 8.0
-    latency: 0.16
+    latency: 0.28
     energy_factor: 0.95
   - type: edge
     cpu_capacity: 9.0
-    latency: 0.20
+    latency: 0.34
     energy_factor: 1.0
   - type: edge
     cpu_capacity: 10.5
-    latency: 0.24
+    latency: 0.42
     energy_factor: 1.05
   - type: edge
     cpu_capacity: 12.0
-    latency: 0.28
+    latency: 0.50
     energy_factor: 1.08
   - type: edge
     cpu_capacity: 13.5
-    latency: 0.34
+    latency: 0.60
     energy_factor: 1.12
   - type: regional
     cpu_capacity: 16.0
-    latency: 0.45
+    latency: 0.78
     energy_factor: 1.25
   - type: regional
     cpu_capacity: 18.0
-    latency: 0.58
+    latency: 0.95
     energy_factor: 1.35
   - type: cloud
     cpu_capacity: 28.0
-    latency: 0.85
+    latency: 1.35
     energy_factor: 1.55
+  - type: regional
+    cpu_capacity: 20.0
+    latency: 1.10
+    energy_factor: 1.45
+  - type: cloud
+    cpu_capacity: 34.0
+    latency: 1.65
+    energy_factor: 1.75
 
 task:
   size_min: 1.0
@@ -194,28 +209,28 @@ task_types:
     deadline_scale: 0.95
     priority_bias: 0
     local_compute_scale: 0.65
-    transmission_scale: 0.55
+    transmission_scale: 0.85
   - name: perception
     size_scale: 1.15
     deadline_scale: 1.0
     priority_bias: 1
     local_compute_scale: 1.05
-    transmission_scale: 0.95
+    transmission_scale: 1.35
   - name: mapping
     size_scale: 1.35
     deadline_scale: 1.2
     priority_bias: 1
     local_compute_scale: 1.25
-    transmission_scale: 1.12
+    transmission_scale: 1.55
   - name: manipulation
     size_scale: 1.0
     deadline_scale: 0.95
     priority_bias: 2
     local_compute_scale: 0.95
-    transmission_scale: 0.75
+    transmission_scale: 1.05
   - name: inspection
     size_scale: 0.9
     deadline_scale: 0.9
     priority_bias: 1
     local_compute_scale: 0.85
-    transmission_scale: 0.7
+    transmission_scale: 1.00

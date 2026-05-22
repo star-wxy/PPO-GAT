@@ -82,10 +82,14 @@ def main():
                 "new_tasks_generated": step_info.get("new_tasks_generated"),
                 "generated_tasks_total": step_info.get("generated_tasks_total"),
                 "completed_tasks_total": step_info.get("completed_tasks_total"),
+                "charging_robots": step_info.get("charging_robots"),
+                "charging_started_count": step_info.get("charging_started_count"),
+                "charging_recovered_count": step_info.get("charging_recovered_count"),
                 "compute_time": step_info.get("compute_time"),
                 "queue_delay": step_info.get("queue_delay"),
                 "transfer_latency": step_info.get("transfer_latency"),
                 "network_latency": step_info.get("network_latency"),
+                "bandwidth_scale": step_info.get("bandwidth_scale"),
                 "total_time": step_info.get("total_time"),
                 "energy_cost": step_info.get("energy_cost"),
                 "deadline_penalty": step_info.get("deadline_penalty"),
@@ -95,6 +99,34 @@ def main():
                 "remote_cloud_penalty": step_info.get("remote_cloud_penalty"),
                 "locality_bonus": step_info.get("locality_bonus"),
                 "slack_bonus": step_info.get("slack_bonus"),
+                "reward_mode": step_info.get("reward_mode"),
+                "inferred_scenario": step_info.get("inferred_scenario"),
+                "scenario_low_energy_score": step_info.get("scenario_low_energy_score"),
+                "scenario_high_load_score": step_info.get("scenario_high_load_score"),
+                "scenario_emergency_score": step_info.get("scenario_emergency_score"),
+                "scenario_high_latency_score": step_info.get("scenario_high_latency_score"),
+                "scenario_normal_score": step_info.get("scenario_normal_score"),
+                "context_load_level": step_info.get("context_load_level"),
+                "context_hotspot_level": step_info.get("context_hotspot_level"),
+                "context_energy_risk": step_info.get("context_energy_risk"),
+                "context_urgency_level": step_info.get("context_urgency_level"),
+                "context_comm_risk": step_info.get("context_comm_risk"),
+                "context_task_scale": step_info.get("context_task_scale"),
+                "context_compute_pressure": step_info.get("context_compute_pressure"),
+                "context_load_context": step_info.get("context_load_context"),
+                "context_normal_context": step_info.get("context_normal_context"),
+                "dynamic_energy_coef": step_info.get("dynamic_energy_coef"),
+                "dynamic_deadline_coef": step_info.get("dynamic_deadline_coef"),
+                "dynamic_deadline_base_coef": step_info.get("dynamic_deadline_base_coef"),
+                "dynamic_overload_coef": step_info.get("dynamic_overload_coef"),
+                "dynamic_queue_coef": step_info.get("dynamic_queue_coef"),
+                "dynamic_latency_coef": step_info.get("dynamic_latency_coef"),
+                "dynamic_balance_coef": step_info.get("dynamic_balance_coef"),
+                "dynamic_slack_coef": step_info.get("dynamic_slack_coef"),
+                "dynamic_queue_penalty": step_info.get("dynamic_queue_penalty"),
+                "dynamic_latency_penalty": step_info.get("dynamic_latency_penalty"),
+                "dynamic_balance_bonus": step_info.get("dynamic_balance_bonus"),
+                "current_robot_energy_before": step_info.get("current_robot_energy_before"),
                 "current_robot_energy": step_info.get("current_robot_energy"),
                 "reward": reward,
             }
@@ -117,6 +149,12 @@ def main():
     cloud_offload_ratio = (
         float((events_df["node_type"] == "cloud").mean()) if not events_df.empty else 0.0
     )
+
+    def mean_or_zero(column: str) -> float:
+        if events_df.empty or column not in events_df:
+            return 0.0
+        value = pd.to_numeric(events_df[column], errors="coerce").mean()
+        return 0.0 if pd.isna(value) else float(value)
 
     summary = {
         "policy": policy_name,
@@ -148,6 +186,21 @@ def main():
         else 0.0,
         "avg_locality_bonus": float(events_df["locality_bonus"].mean()) if not events_df.empty else 0.0,
         "avg_slack_bonus": float(events_df["slack_bonus"].mean()) if not events_df.empty else 0.0,
+        "avg_context_load": mean_or_zero("context_load_context"),
+        "avg_context_energy_risk": mean_or_zero("context_energy_risk"),
+        "avg_context_urgency": mean_or_zero("context_urgency_level"),
+        "avg_context_comm_risk": mean_or_zero("context_comm_risk"),
+        "avg_charging_robots": mean_or_zero("charging_robots"),
+        "total_charging_starts": float(events_df["charging_started_count"].sum())
+        if "charging_started_count" in events_df
+        else 0.0,
+        "total_charging_recoveries": float(events_df["charging_recovered_count"].sum())
+        if "charging_recovered_count" in events_df
+        else 0.0,
+        "avg_scenario_low_energy_score": mean_or_zero("scenario_low_energy_score"),
+        "avg_scenario_high_load_score": mean_or_zero("scenario_high_load_score"),
+        "avg_scenario_emergency_score": mean_or_zero("scenario_emergency_score"),
+        "avg_scenario_high_latency_score": mean_or_zero("scenario_high_latency_score"),
     }
     summary_df = pd.DataFrame([summary])
 

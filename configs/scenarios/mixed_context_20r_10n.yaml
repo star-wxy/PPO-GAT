@@ -1,27 +1,40 @@
 num_robots: 20
 num_nodes: 10
-max_steps: 200
+max_steps: 260
 
 robot:
-  init_energy: 120.0
+  init_energy: 45.0
   local_cpu_min: 1.4
   local_cpu_max: 4.2
   task_rate_min: 0.35
-  task_rate_max: 0.85
-  task_arrival_base: 0.015
-  task_arrival_scale: 0.065
-  task_arrival_cap: 0.12
-  max_new_tasks_per_step: 2
+  task_rate_max: 1.05
+  task_arrival_base: 0.025
+  task_arrival_scale: 0.095
+  task_arrival_cap: 0.24
+  max_new_tasks_per_step: 4
   task_size_bias_min: 0.8
-  task_size_bias_max: 1.25
-  deadline_bias_min: 0.85
-  deadline_bias_max: 1.25
+  task_size_bias_max: 1.35
+  deadline_bias_min: 0.55
+  deadline_bias_max: 1.35
+  charging_enabled: true
+  charge_rate: 2.0
+  critical_energy_ratio: 0.18
+  recover_energy_ratio: 0.45
+  charging_task_rate_scale: 0.0
+  idle_charge_rate_scale: 0.0
+
+network:
+  bandwidth_scale: 0.70
+  transfer_hop_latency: 0.13
+  transfer_demand_latency: 0.08
+  transfer_hop_energy: 0.18
+  transfer_demand_energy: 0.10
 
 reward:
   mode: dynamic_context
   backlog_penalty_mode: log
   backlog_penalty_coef: 1.15
-  backlog_soft_limit: 30
+  backlog_soft_limit: 36
   backlog_delta_penalty_coef: 0.25
   total_time_penalty_coef: 2.7
   energy_penalty_coef: 1.55
@@ -142,80 +155,80 @@ robots:
 nodes:
   - type: local
     cpu_capacity: 4.0
-    latency: 0.04
-    energy_factor: 0.78
+    latency: 0.05
+    energy_factor: 0.88
   - type: local
     cpu_capacity: 4.8
-    latency: 0.05
-    energy_factor: 0.82
+    latency: 0.07
+    energy_factor: 0.92
   - type: edge
-    cpu_capacity: 8.0
-    latency: 0.16
-    energy_factor: 0.95
+    cpu_capacity: 7.2
+    latency: 0.18
+    energy_factor: 1.00
   - type: edge
-    cpu_capacity: 9.0
-    latency: 0.20
-    energy_factor: 1.0
-  - type: edge
-    cpu_capacity: 10.5
+    cpu_capacity: 8.4
     latency: 0.24
     energy_factor: 1.05
   - type: edge
-    cpu_capacity: 12.0
-    latency: 0.28
-    energy_factor: 1.08
-  - type: edge
-    cpu_capacity: 13.5
-    latency: 0.34
+    cpu_capacity: 9.6
+    latency: 0.31
     energy_factor: 1.12
+  - type: edge
+    cpu_capacity: 11.0
+    latency: 0.38
+    energy_factor: 1.18
+  - type: edge
+    cpu_capacity: 12.5
+    latency: 0.48
+    energy_factor: 1.24
   - type: regional
     cpu_capacity: 16.0
-    latency: 0.45
-    energy_factor: 1.25
+    latency: 0.68
+    energy_factor: 1.38
   - type: regional
     cpu_capacity: 18.0
-    latency: 0.58
-    energy_factor: 1.35
+    latency: 0.88
+    energy_factor: 1.50
   - type: cloud
     cpu_capacity: 28.0
-    latency: 0.85
-    energy_factor: 1.55
+    latency: 1.30
+    energy_factor: 1.78
 
 task:
   size_min: 1.0
   size_max: 10.0
-  deadline_min: 3
-  deadline_max: 9
+  deadline_min: 2
+  deadline_max: 10
   priority_levels: 3
 
 task_types:
   - name: navigation
-    size_scale: 0.75
-    deadline_scale: 0.95
+    size_scale: 0.65
+    deadline_scale: 1.20
     priority_bias: 0
-    local_compute_scale: 0.65
-    transmission_scale: 0.55
+    local_compute_scale: 0.60
+    transmission_scale: 0.45
   - name: perception
-    size_scale: 1.15
-    deadline_scale: 1.0
+    size_scale: 1.20
+    deadline_scale: 0.75
     priority_bias: 1
     local_compute_scale: 1.05
-    transmission_scale: 0.95
+    transmission_scale: 1.15
   - name: mapping
-    size_scale: 1.35
-    deadline_scale: 1.2
+    size_scale: 1.45
+    deadline_scale: 1.05
     priority_bias: 1
     local_compute_scale: 1.25
-    transmission_scale: 1.12
+    transmission_scale: 1.55
   - name: manipulation
     size_scale: 1.0
-    deadline_scale: 0.95
+    deadline_scale: 0.55
     priority_bias: 2
     local_compute_scale: 0.95
-    transmission_scale: 0.75
+    transmission_scale: 0.90
   - name: inspection
     size_scale: 0.9
-    deadline_scale: 0.9
-    priority_bias: 1
+    deadline_scale: 0.65
+    priority_bias: 2
     local_compute_scale: 0.85
-    transmission_scale: 0.7
+    transmission_scale: 0.85

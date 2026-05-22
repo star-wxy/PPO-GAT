@@ -3,7 +3,7 @@ num_nodes: 10
 max_steps: 200
 
 robot:
-  init_energy: 120.0
+  init_energy: 55.0
   local_cpu_min: 1.4
   local_cpu_max: 4.2
   task_rate_min: 0.35
@@ -16,6 +16,10 @@ robot:
   task_size_bias_max: 1.25
   deadline_bias_min: 0.85
   deadline_bias_max: 1.25
+
+network:
+  bandwidth_scale: 0.75
+  transfer_demand_energy: 0.12
 
 reward:
   mode: dynamic_context
@@ -143,43 +147,43 @@ nodes:
   - type: local
     cpu_capacity: 4.0
     latency: 0.04
-    energy_factor: 0.78
+    energy_factor: 0.92
   - type: local
     cpu_capacity: 4.8
     latency: 0.05
-    energy_factor: 0.82
+    energy_factor: 0.96
   - type: edge
     cpu_capacity: 8.0
     latency: 0.16
-    energy_factor: 0.95
+    energy_factor: 1.08
   - type: edge
     cpu_capacity: 9.0
     latency: 0.20
-    energy_factor: 1.0
+    energy_factor: 1.12
   - type: edge
     cpu_capacity: 10.5
     latency: 0.24
-    energy_factor: 1.05
+    energy_factor: 1.18
   - type: edge
     cpu_capacity: 12.0
     latency: 0.28
-    energy_factor: 1.08
+    energy_factor: 1.22
   - type: edge
     cpu_capacity: 13.5
     latency: 0.34
-    energy_factor: 1.12
+    energy_factor: 1.28
   - type: regional
     cpu_capacity: 16.0
     latency: 0.45
-    energy_factor: 1.25
+    energy_factor: 1.45
   - type: regional
     cpu_capacity: 18.0
     latency: 0.58
-    energy_factor: 1.35
+    energy_factor: 1.55
   - type: cloud
     cpu_capacity: 28.0
     latency: 0.85
-    energy_factor: 1.55
+    energy_factor: 1.85
 
 task:
   size_min: 1.0

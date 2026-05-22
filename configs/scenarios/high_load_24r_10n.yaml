@@ -1,27 +1,30 @@
-num_robots: 20
+num_robots: 24
 num_nodes: 10
-max_steps: 200
+max_steps: 240
 
 robot:
   init_energy: 120.0
   local_cpu_min: 1.4
   local_cpu_max: 4.2
-  task_rate_min: 0.35
-  task_rate_max: 0.85
-  task_arrival_base: 0.015
-  task_arrival_scale: 0.065
-  task_arrival_cap: 0.12
-  max_new_tasks_per_step: 2
+  task_rate_min: 0.65
+  task_rate_max: 1.05
+  task_arrival_base: 0.045
+  task_arrival_scale: 0.14
+  task_arrival_cap: 0.30
+  max_new_tasks_per_step: 4
   task_size_bias_min: 0.8
   task_size_bias_max: 1.25
   deadline_bias_min: 0.85
   deadline_bias_max: 1.25
 
+network:
+  bandwidth_scale: 0.85
+
 reward:
   mode: dynamic_context
   backlog_penalty_mode: log
   backlog_penalty_coef: 1.15
-  backlog_soft_limit: 30
+  backlog_soft_limit: 45
   backlog_delta_penalty_coef: 0.25
   total_time_penalty_coef: 2.7
   energy_penalty_coef: 1.55
@@ -141,39 +144,39 @@ robots:
 
 nodes:
   - type: local
-    cpu_capacity: 4.0
+    cpu_capacity: 3.4
     latency: 0.04
     energy_factor: 0.78
   - type: local
-    cpu_capacity: 4.8
+    cpu_capacity: 4.0
     latency: 0.05
     energy_factor: 0.82
   - type: edge
-    cpu_capacity: 8.0
+    cpu_capacity: 6.8
     latency: 0.16
     energy_factor: 0.95
   - type: edge
-    cpu_capacity: 9.0
+    cpu_capacity: 7.6
     latency: 0.20
     energy_factor: 1.0
   - type: edge
-    cpu_capacity: 10.5
+    cpu_capacity: 8.6
     latency: 0.24
     energy_factor: 1.05
   - type: edge
-    cpu_capacity: 12.0
+    cpu_capacity: 9.8
     latency: 0.28
     energy_factor: 1.08
   - type: edge
-    cpu_capacity: 13.5
+    cpu_capacity: 10.8
     latency: 0.34
     energy_factor: 1.12
   - type: regional
-    cpu_capacity: 16.0
+    cpu_capacity: 13.0
     latency: 0.45
     energy_factor: 1.25
   - type: regional
-    cpu_capacity: 18.0
+    cpu_capacity: 14.5
     latency: 0.58
     energy_factor: 1.35
   - type: cloud

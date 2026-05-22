@@ -22,6 +22,23 @@ METRIC_KEYS = [
     "avg_energy_cost",
     "avg_deadline_penalty",
     "avg_overload_penalty",
+    "avg_context_load",
+    "avg_context_energy_risk",
+    "avg_context_urgency",
+    "avg_context_comm_risk",
+    "avg_charging_robots",
+    "total_charging_starts",
+    "total_charging_recoveries",
+    "avg_scenario_low_energy_score",
+    "avg_scenario_high_load_score",
+    "avg_scenario_emergency_score",
+    "avg_scenario_high_latency_score",
+    "avg_dynamic_energy_coef",
+    "avg_dynamic_deadline_coef",
+    "avg_dynamic_overload_coef",
+    "avg_dynamic_queue_coef",
+    "avg_dynamic_latency_coef",
+    "avg_dynamic_balance_coef",
 ]
 
 
@@ -76,6 +93,23 @@ def evaluate_single_seed(
     total_energy_cost = 0.0
     total_deadline_penalty = 0.0
     total_overload_penalty = 0.0
+    total_context_load = 0.0
+    total_context_energy_risk = 0.0
+    total_context_urgency = 0.0
+    total_context_comm_risk = 0.0
+    total_charging_robots = 0.0
+    total_charging_starts = 0.0
+    total_charging_recoveries = 0.0
+    total_scenario_low_energy_score = 0.0
+    total_scenario_high_load_score = 0.0
+    total_scenario_emergency_score = 0.0
+    total_scenario_high_latency_score = 0.0
+    total_dynamic_energy_coef = 0.0
+    total_dynamic_deadline_coef = 0.0
+    total_dynamic_overload_coef = 0.0
+    total_dynamic_queue_coef = 0.0
+    total_dynamic_latency_coef = 0.0
+    total_dynamic_balance_coef = 0.0
     step_count = 0
 
     for _ in range(env_cfg["max_steps"]):
@@ -91,6 +125,23 @@ def evaluate_single_seed(
         total_energy_cost += info.get("energy_cost", 0.0)
         total_deadline_penalty += info.get("deadline_penalty", 0.0)
         total_overload_penalty += info.get("overload_penalty", 0.0)
+        total_context_load += info.get("context_load_context", 0.0)
+        total_context_energy_risk += info.get("context_energy_risk", 0.0)
+        total_context_urgency += info.get("context_urgency_level", 0.0)
+        total_context_comm_risk += info.get("context_comm_risk", 0.0)
+        total_charging_robots += info.get("charging_robots", 0.0)
+        total_charging_starts += info.get("charging_started_count", 0.0)
+        total_charging_recoveries += info.get("charging_recovered_count", 0.0)
+        total_scenario_low_energy_score += info.get("scenario_low_energy_score", 0.0)
+        total_scenario_high_load_score += info.get("scenario_high_load_score", 0.0)
+        total_scenario_emergency_score += info.get("scenario_emergency_score", 0.0)
+        total_scenario_high_latency_score += info.get("scenario_high_latency_score", 0.0)
+        total_dynamic_energy_coef += info.get("dynamic_energy_coef", 0.0)
+        total_dynamic_deadline_coef += info.get("dynamic_deadline_coef", 0.0)
+        total_dynamic_overload_coef += info.get("dynamic_overload_coef", 0.0)
+        total_dynamic_queue_coef += info.get("dynamic_queue_coef", 0.0)
+        total_dynamic_latency_coef += info.get("dynamic_latency_coef", 0.0)
+        total_dynamic_balance_coef += info.get("dynamic_balance_coef", 0.0)
 
         step_count += 1
         if terminated or truncated:
@@ -109,6 +160,23 @@ def evaluate_single_seed(
         "avg_energy_cost": total_energy_cost / max(step_count, 1),
         "avg_deadline_penalty": total_deadline_penalty / max(step_count, 1),
         "avg_overload_penalty": total_overload_penalty / max(step_count, 1),
+        "avg_context_load": total_context_load / max(step_count, 1),
+        "avg_context_energy_risk": total_context_energy_risk / max(step_count, 1),
+        "avg_context_urgency": total_context_urgency / max(step_count, 1),
+        "avg_context_comm_risk": total_context_comm_risk / max(step_count, 1),
+        "avg_charging_robots": total_charging_robots / max(step_count, 1),
+        "total_charging_starts": total_charging_starts,
+        "total_charging_recoveries": total_charging_recoveries,
+        "avg_scenario_low_energy_score": total_scenario_low_energy_score / max(step_count, 1),
+        "avg_scenario_high_load_score": total_scenario_high_load_score / max(step_count, 1),
+        "avg_scenario_emergency_score": total_scenario_emergency_score / max(step_count, 1),
+        "avg_scenario_high_latency_score": total_scenario_high_latency_score / max(step_count, 1),
+        "avg_dynamic_energy_coef": total_dynamic_energy_coef / max(step_count, 1),
+        "avg_dynamic_deadline_coef": total_dynamic_deadline_coef / max(step_count, 1),
+        "avg_dynamic_overload_coef": total_dynamic_overload_coef / max(step_count, 1),
+        "avg_dynamic_queue_coef": total_dynamic_queue_coef / max(step_count, 1),
+        "avg_dynamic_latency_coef": total_dynamic_latency_coef / max(step_count, 1),
+        "avg_dynamic_balance_coef": total_dynamic_balance_coef / max(step_count, 1),
     }
 
 
@@ -162,6 +230,28 @@ def build_model_candidates(
     return candidates
 
 
+def model_is_compatible(model_path: Path, env_cfg: dict) -> tuple[bool, str]:
+    env = SchedulerEnv(env_cfg)
+    model = PPO.load(model_path)
+    expected_obs_dim = int(model.observation_space.shape[0])
+    env_obs_dim = int(env.observation_space.shape[0])
+    expected_action_dim = getattr(model.action_space, "n", None)
+
+    if env_obs_dim != expected_obs_dim and env_obs_dim != expected_obs_dim + 2:
+        return (
+            False,
+            f"obs dim mismatch: model={expected_obs_dim}, env={env_obs_dim}",
+        )
+
+    if expected_action_dim != env_cfg["num_nodes"]:
+        return (
+            False,
+            f"action dim mismatch: model={expected_action_dim}, env={env_cfg['num_nodes']}",
+        )
+
+    return True, "compatible"
+
+
 def main():
     print(">>> compare_ppo_models.py started", flush=True)
     print(f">>> evaluation seeds: {EVAL_SEEDS}", flush=True)
@@ -191,6 +281,11 @@ def main():
     for model_name, model_path in models_to_compare.items():
         if not model_path.exists():
             print(f">>> skipping {model_name}, file not found: {model_path}", flush=True)
+            continue
+
+        compatible, reason = model_is_compatible(model_path, env_cfg)
+        if not compatible:
+            print(f">>> skipping {model_name}, checkpoint is not compatible: {reason}", flush=True)
             continue
 
         try:
