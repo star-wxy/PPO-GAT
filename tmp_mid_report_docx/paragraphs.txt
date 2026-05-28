@@ -1,0 +1,114 @@
+﻿000: 电信科学技术研究院
+001: 研究生学位论文中期报告
+003: 姓名：王星宇
+004: 学号：840012431
+005: 专业：信息通信与工程
+006: 导师：栗蔚
+007: 课题单位：中国信息通信研究院
+008: 论文题目：基于智能体的多机器人算力互联网调度研究
+009: 填报日期：2026年5月20日
+011: 一、论文工作计划
+012: 1.1 论文选题
+013: 本论文围绕《基于智能体的多机器人算力互联网调度研究》开展。开题阶段确定的研究对象是由多机器人任务源、异构算力节点和网络拓扑关系共同构成的复杂调度系统。研究背景来自人工智能推理应用向边缘侧和现场侧扩展后的算力供需矛盾：多机器人系统在导航、感知、建图、操作等任务中持续产生计算需求，但本地算力、边缘节点和云节点在处理能力、传输时延、能耗代价和拥塞状态上存在明显差异，传统静态规则难以同时兼顾任务时效、资源利用率和机器人能耗。
+014: 开题报告中提出，本研究参考算力互联网体系架构，将算力节点状态、机器人任务特征、机器人自身状态以及机器人到算力节点的拓扑关系纳入统一建模，构建面向多机器人场景的集中式智能体调度方法。论文选题既关注算力互联网资源编排中的理论问题，也面向物流仓储、工业巡检、应急处置等实际多机器人应用中《任务延迟高、算力分配不均、协同效率不足》的工程需求。
+015: 1.2 论文研究目标
+016: 论文总体目标是在算力互联网架构下，设计一种融合强化学习与图神经网络的多机器人算力调度方法，使智能体能够根据当前任务类型、任务优先级、任务规模、deadline、机器人能量、机器人队列长度、异构节点空闲算力、节点负载、节点时延及拓扑距离等状态信息，自主选择合适的本地、边缘或云端计算节点。通过训练和仿真实验，验证该方法相对于随机、轮询、贪心以及普通PPO策略在平均奖励、任务完成时间、队列等待、能耗和deadline违约等指标上的改进。
+017: 具体目标包括：第一，建立《算力-任务-机器人》多要素协同的仿真环境，支持多机器人异构画像、异构计算节点、任务类型差异、拓扑传输代价和邻接拥塞传播；第二，完成PPO基线算法、朴素PPO+GAT算法和节点打分式PPO+GAT算法的设计与实现；第三，构造多目标奖励函数，将总完成时间、能耗、节点过载、deadline惩罚、拓扑距离、队列压力和云端误用等因素纳入统一反馈；第四，形成多seed重复评估、基线算法对比和轻量系统级验证结果，为论文后续实验章节和结论分析提供数据支撑。
+018: 1.3 论文主要研究内容
+019: 开题阶段确定的主要研究内容分为三个层次。第一是系统建模层，围绕算力互联网分层思想，抽象多机器人任务流、计算节点资源和网络拓扑关系。机器人侧需要刻画本地算力、剩余能量、任务产生率、任务规模偏好和deadline偏好；任务侧需要刻画任务类型、任务规模、优先级、传输需求、本地计算需求和来源机器人；算力节点侧需要刻画本地节点、边缘节点、云节点的CPU容量、基础时延、能耗因子和动态负载。
+020: 第二是算法设计层，基于Stable-Baselines3的PPO框架构建强化学习调度智能体，并引入图注意力网络对任务节点、计算节点和机器人节点之间的关联进行建模。普通PPO用于形成强化学习基线；朴素PPO+GAT用于验证图结构特征抽取的基本作用；节点打分式PPO+GAT进一步将候选计算节点的启发式特征、图嵌入和原始状态特征融合，直接输出与节点选择相关的判别信息，以提升动作空间决策的稳定性。
+021: 第三是实验验证层，设计包括随机策略、轮询策略、贪心CPU策略、PPO-Baseline、PPO-GAT-Naive和PPO-GAT-Scoring在内的多组对比实验。实验指标包括平均奖励、总奖励、平均计算时间、平均排队延迟、平均网络时延、平均总完成时间、平均能耗、deadline惩罚和过载惩罚等。同时设计轻量级《多机器人任务持续产生—中央调度器决策—计算节点执行》的系统验证流程，在尚未全面接入Gazebo/ROS2的情况下，先完成算法与调度闭环的阶段性验证。
+022: 1.4 论文预期成果形式
+023: 预期成果包括：一是形成完整的多机器人算力互联网调度仿真代码，包括环境建模、算法训练、模型评估、基线对比、结果绘图和轻量系统验证脚本；二是形成可复现实验数据，包括训练模型、TensorBoard日志、多seed评估CSV、阶段性图表和系统验证事件日志；三是完成论文主体方法，包括多要素协同建模、动态多目标奖励函数和融合图注意力网络的智能体调度算法；四是形成不少于一篇论文或技术报告性质的研究成果，系统阐述算力互联网背景下的多机器人智能调度方法与实验结论。
+024: 1.5 论文研究进度计划
+025: 开题报告中的计划为：2025年11月至2025年12月完成文献调研、工具环境准备和相关代码阅读；2026年1月至2026年3月完成算力节点拓扑、状态空间、动作空间和奖励函数的初步设计，并实现PPO策略学习；2026年4月至2026年5月开展实验平台搭建与性能测试，扩展多机器人和多任务场景，调试奖励函数并观察训练曲线；2026年6月至2026年9月开展更大规模节点场景、基准算法对比和消融实验；2026年10月至2027年1月整理模型、代码、实验数据并撰写学位论文。
+026: 截至本次中期检查，项目已完成文献梳理、核心仿真环境搭建、三类强化学习/图强化学习策略实现、基线对比、多seed评估、图表生成和轻量系统验证。整体进度与开题计划中2026年4月至5月阶段基本一致，并已提前形成可支撑论文方法章节和实验章节的初步数据。下一阶段重点将从《能跑通、能对比》转向《扩大规模、补充消融、提高实验严谨性和完善论文写作》。
+027: 二、已经完成的工作
+028: 2.1 国内外相关技术与方法调研
+029: 开题以来，已围绕算力互联网、边缘计算任务卸载、强化学习调度、图神经网络、多机器人协同等方向完成持续调研。调研结论表明，传统任务调度方法通常依赖启发式规则、数学规划或局部贪心策略，在小规模静态场景中具备实现简单、解释性较强的优势，但面对任务连续到达、节点负载变化、传输链路差异和多目标约束时，容易出现全局协同不足和策略迁移能力弱的问题。强化学习方法能够通过与环境交互学习长期收益，但普通强化学习状态表示往往难以充分利用多机器人和算力节点之间的图结构关联。
+030: 图神经网络尤其是图注意力网络适合表达拓扑结构动态变化和节点之间的非欧式关系。对于本课题，机器人、任务和计算节点天然可以构造成图，其中任务与计算节点之间存在候选卸载关系，机器人与任务之间存在来源关系，计算节点之间存在拓扑邻接和拥塞传播关系。因此，将GAT作为PPO策略网络的特征抽取模块，符合论文开题阶段提出的技术路线。调研也表明，单纯引入GAT并不必然提升调度性能，关键在于如何把图嵌入与节点级动作选择对齐，这也是后续节点打分式PPO+GAT方案产生的原因。
+031: 2.2 多机器人算力调度仿真环境构建
+032: 目前项目已经形成面向多机器人智能体的异构算力调度实验环境，核心文件包括configs/env.yaml、src/envs/multi_robot_scheduler_env.py、src/envs/task.py、src/envs/robot.py和src/envs/node.py。环境采用Gymnasium接口，动作空间为离散计算节点选择，观测空间包含当前任务特征、候选节点状态和机器人状态。当前配置中包含3个机器人和4个计算节点，其中计算节点包括本地节点、两个边缘节点和一个云节点，CPU容量分别为4.0、8.0、10.0和20.0，基础时延分别为0.05、0.20、0.30和0.80，能耗因子分别为0.8、1.0、1.1和1.5。
+033: 机器人侧已经实现异构画像。不同机器人具有不同home_node_id、本地CPU、任务到达率、任务规模偏好和deadline偏好。任务侧已经支持navigation、perception、mapping、manipulation四类任务，不同任务类型具有不同的规模系数、deadline系数、优先级偏置、本地计算需求和传输需求。环境每一步根据机器人任务产生率生成任务，按优先级、deadline、来源机器人和任务编号排序选择当前任务，从而模拟多机器人连续产生任务后由中央调度器逐个决策的过程。
+034: 环境中已经纳入拓扑约束与拥塞传播机制。机器人到计算节点的传输时延由机器人home节点、目标节点拓扑距离和任务传输需求共同决定；传输能耗同样与拓扑距离和传输需求相关。某个节点被选中执行任务后，其负载会向相邻节点传播，形成邻接拥塞效应，使得调度问题不再是独立节点选择，而是带有系统级资源竞争和延迟反馈的序贯决策问题。这一设计与开题报告中《复杂拓扑下资源协同不足》的问题相对应。
+035: 2.3 奖励函数与评价指标设计
+036: 已完成多目标奖励函数的阶段性设计。当前奖励函数以任务总完成时间、能耗、deadline违约、节点过载、拓扑距离和机器人队列长度为主要惩罚项，同时加入系统backlog惩罚、节点压力惩罚、远程云节点惩罚、云端误用惩罚、本地性奖励、deadline余量奖励和云端拥塞缓解奖励。该奖励设计的目标是让智能体不仅追求单个任务的短时延，还要综合考虑系统排队压力、节点负载均衡、机器人能量消耗和云边协同边界。
+037: 评价指标已经在比较脚本中统一输出，包括avg_reward、total_reward、avg_compute_time、avg_queue_delay、avg_network_latency、avg_total_time、avg_energy_cost、avg_deadline_penalty和avg_overload_penalty等。相对于开题阶段较宏观的《任务完成时间、算力利用率、机器人能耗》指标，目前项目已经将这些目标细化为可由仿真环境直接记录的过程指标，有利于后续在论文实验章节中进行定量分析。
+038: 2.4 PPO基线与传统策略对比实验
+039: 已实现PPO-Baseline、Random-Policy、RoundRobin-Policy和GreedyCPU-Policy对比。根据outputs/results/policy_baseline_comparison.csv，PPO-Baseline在100步评估中取得平均奖励3.0714，总奖励307.1378，平均总完成时间0.8469，平均能耗1.4875，deadline惩罚0.0128；随机策略平均奖励0.7376，平均总完成时间1.1675，deadline惩罚0.0664；轮询策略平均奖励1.3251，平均总完成时间1.0739，deadline惩罚0.0506；贪心CPU策略平均奖励为-1.0155，平均总完成时间1.4793，deadline惩罚0.1513。
+040: 这一结果说明，在当前环境和奖励设计下，PPO-Baseline已经明显优于不学习的传统基线策略。特别是与随机策略相比，PPO-Baseline的平均奖励提升约316.4%，平均总完成时间降低约27.5%，deadline惩罚降低约80.7%；与轮询策略相比，平均奖励提升约131.8%，平均总完成时间降低约21.1%，deadline惩罚降低约74.7%；与贪心CPU策略相比，PPO-Baseline避免了只追求CPU容量而忽视网络时延、队列和过载的缺陷。该实验验证了强化学习调度在多目标动态场景中的必要性。
+041: 2.5 PPO+GAT融合策略实现与多seed评估
+042: 在普通PPO基线基础上，已完成两类GAT融合模型。第一类为PPO-GAT-Naive，使用GATFeatureExtractor将任务节点、计算节点和机器人节点构造成图，通过两层GATConv和原始观测编码融合生成策略网络特征。第二类为PPO-GAT-Scoring，使用NodeScoringGATFeatureExtractor，在图嵌入基础上显式构造候选节点打分机制，将节点空闲算力、负载、时延、任务容量比、过载余量、预测完成时间、deadline余量、机器人队列压力、云端使用条件等特征纳入节点级评分。
+043: 多seed评估使用5个随机种子，每个模型评估100步。根据outputs/results/ppo_gat_comparison.csv，PPO-GAT-Scoring平均奖励为-5.6945，标准差0.5660；PPO-Baseline平均奖励为-6.6680，标准差0.8285；PPO-GAT-Naive平均奖励为-9.5421，标准差0.9061。相对于PPO-Baseline，PPO-GAT-Scoring平均奖励提升约14.6%，总奖励从-666.7963提升到-569.4485；相对于PPO-GAT-Naive，提升约40.3%。在平均总完成时间方面，PPO-GAT-Scoring为1.1875，PPO-Baseline为1.3096，PPO-GAT-Naive为1.7469，说明节点打分式结构对降低整体完成时间具有明显作用。
+044: 从分项指标看，PPO-GAT-Scoring平均网络时延约0.4514，明显低于PPO-Baseline约0.8118，说明GAT与节点打分机制能更好识别拓扑距离和节点时延对调度决策的影响。PPO-GAT-Naive虽然引入了图结构，但平均队列延迟达到0.7380左右，总完成时间明显偏高，说明单纯图特征抽取如果未与动作节点选择形成强约束，可能导致策略学习不稳定。该结果为论文创新点提供了阶段性证据：图神经网络应服务于节点级决策，而不是只作为普通状态编码器。
+045: 2.6 结果可视化与实验流程整理
+046: 项目已完成训练脚本、对比脚本、绘图脚本和一键实验脚本整理。scripts目录下包括train_ppo_baseline.ps1、train_ppo_naive.ps1、train_ppo_scoring.ps1、compare_baselines.ps1、compare_ppo_models.ps1、plot_results.ps1、run_baseline_experiment.ps1、run_gat_experiment.ps1、run_tensorboard.ps1和run_lightweight_multi_robot_validation.ps1。outputs目录下已经保存训练模型、TensorBoard日志、评估结果CSV和可视化图片。
+047: 当前图表包括baseline_avg_reward_comparison.png、baseline_avg_total_time_comparison.png、baseline_avg_energy_cost_comparison.png、baseline_avg_queue_delay_comparison.png、ppo_gat_avg_reward_comparison.png、ppo_gat_avg_total_time_comparison.png、ppo_gat_avg_energy_cost_comparison.png等，可用于论文中展示传统策略对比和PPO/GAT融合策略对比。实验流程已经具备可复现性，后续只需在扩大环境规模和补充消融实验后更新结果即可。
+048: 2.7 轻量系统验证
+049: 为支撑《多机器人任务持续产生—中央调度器决策—计算节点执行》的系统级论证，项目已完成轻量系统验证脚本src/lightweight_multi_robot_validation.py。该验证不依赖Gazebo，在当前阶段用于快速检查算法调度闭环是否成立。根据outputs/results/lightweight_multi_robot_validation_summary.csv，当前PPO-GAT-Scoring在100步轻量验证中总奖励为-534.6604，平均奖励为-5.3466，平均总完成时间为1.0886，平均队列延迟为0.1387，平均能耗为1.5832，平均过载惩罚为0.0915。
+050: 轻量验证的意义在于，它将算法评估从单纯离线指标扩展到持续任务流过程，能够记录事件日志和系统摘要，为论文后续描述原型系统和验证流程提供材料。尽管该验证尚未达到Gazebo/ROS2物理仿真的精细程度，但已经完成中央调度器、任务产生、节点执行和结果记录的闭环，是下一阶段接入更真实机器人仿真环境的基础。
+051: 2.8 论文发表及专利申请情况
+052: 截至本次中期检查，暂未完成论文发表或专利申请。当前主要工作集中在算法实现、仿真环境搭建和实验数据积累。下一阶段计划在补充大规模实验、消融实验和统计显著性分析后，整理形成论文投稿材料或技术报告。
+053: 三、关键技术或难点（创新点）
+054: 3.1 《算力-任务-机器人》协同建模
+055: 已经完成的第一项关键技术是多要素协同建模。与只考虑计算节点负载的调度模型不同，本研究将机器人画像、任务类型、节点资源和拓扑约束放在同一环境中。机器人不是被动任务集合，而是具有本地CPU、能量、任务到达率和队列状态的动态实体；任务不是无差别作业，而是具有来源机器人、类型、优先级、deadline、本地计算需求和传输需求的结构化对象；节点也不是静态服务器，而是具有CPU容量、时延、能耗因子、动态负载和邻接拥塞影响的异构资源。
+056: 这一建模方式解决了开题报告中提出的《算力调度与机器人任务协同存在断层》的问题，使智能体能够感知调度动作对机器人侧和算力侧的共同影响。例如，选择云节点可能获得更高CPU容量，但会带来更高网络时延和能耗；选择本地或邻近边缘节点可能降低传输代价，但在节点负载较高时会引发排队和过载惩罚。通过统一状态和奖励设计，论文方法能够在这些矛盾目标之间学习折中策略。
+057: 3.2 面向复杂拓扑的GAT特征提取
+058: 第二项关键技术是将图注意力网络用于多机器人算力调度状态表征。当前实现将当前任务、多个计算节点和多个机器人构造成图节点，并建立任务—计算节点、任务—机器人、机器人—计算节点以及相邻计算节点之间的边。GATConv通过注意力机制聚合邻居信息，使模型能够从节点局部特征和拓扑邻接关系中生成更具结构感知能力的嵌入。
+059: 实验中发现，朴素GAT特征抽取并不稳定，PPO-GAT-Naive在多seed评估中明显弱于PPO-Baseline。这一阶段性发现本身具有研究价值：复杂调度问题中的图结构不仅要被编码，还必须与动作选择空间匹配。因此，后续改进形成节点打分式PPO+GAT，使每个候选计算节点都获得显式评分，再与全局上下文特征融合供PPO策略使用。该结构更贴近《从多个算力节点中选择执行节点》的动作语义。
+060: 3.3 节点打分式PPO+GAT融合算法
+061: 第三项关键技术是节点打分式特征抽取器。NodeScoringGATFeatureExtractor不仅输出全局图嵌入，还针对每个计算节点构造node_inputs，其中包含计算节点嵌入、任务嵌入、机器人均值嵌入、启发式指标和局部原始特征。节点得分由学习评分和启发式评分门控融合得到，启发式部分考虑deadline余量、过载余量、服务余量、近邻边缘奖励、云端拥塞缓解、队列压力、远程代价、能耗代理和云端误用等因素。
+062: 这一设计的创新性在于将可解释的调度启发式和可学习的图表示结合起来。单纯启发式规则难以适应复杂动态环境，单纯神经网络又可能在训练早期产生不合理探索。节点打分式结构通过可学习门控在两者之间建立连接，使策略既能继承任务调度领域的先验知识，又能通过PPO训练适应具体环境。当前多seed结果显示，该结构相对于普通PPO和朴素GAT都有更好的平均奖励和总完成时间，说明该关键技术已取得阶段性效果。
+063: 3.4 动态多目标奖励函数
+064: 第四项关键技术是多目标奖励函数的实现。奖励函数不只惩罚任务完成时间，还同时考虑能耗、deadline违约、节点过载、拓扑距离、机器人队列长度、系统backlog、节点压力、云端远程代价和云端误用，并在边缘节点拥塞或资源不足时给予云端拥塞缓解奖励。这种设计与开题报告中《面向多场景的动态权重奖励函数》目标一致，当前阶段已实现多目标联合反馈，下一阶段将在不同任务负载和不同场景权重下进一步扩展动态权重机制。
+065: 该奖励函数的难点在于平衡不同指标量纲和优化方向。如果时延惩罚过强，策略可能过度选择近端节点导致过载；如果云端惩罚过强，策略无法在边缘拥塞时利用云端资源；如果能耗惩罚过强，策略可能牺牲deadline。当前项目通过多次训练和对比，已经使PPO-GAT-Scoring在网络时延、总完成时间和能耗等指标上形成较合理的折中，但在更大规模场景中仍需进一步调整权重和归一化方式。
+066: 3.5 实验可复现与结果管理
+067: 第五项关键技术是可复现实验流程。项目已经将环境配置、模型训练、基线比较、PPO/GAT比较、绘图和轻量验证分别封装成脚本，结果统一输出到outputs目录。多seed评估表和per_seed明细为后续论文统计分析提供基础。这一工作虽然不属于算法创新本身，但对于学位论文非常关键，因为调度算法的有效性必须通过可重复、可追踪、可解释的实验数据来支撑。
+068: 四、下一阶段工作计划
+069: 4.1 目前存在的问题
+070: 当前工作仍存在若干不足。第一，仿真规模仍偏小，当前主配置为3个机器人和4个计算节点，虽然适合算法快速迭代，但与开题计划中扩展到更大规模机器人和节点的目标仍有差距。第二，动态场景还不够丰富，目前主要围绕任务类型、任务到达率和节点负载变化展开，尚未系统设置日常作业、应急响应、低电量优先、边缘拥塞、云端受限等场景。第三，消融实验不足，尚需分别验证GAT结构、节点打分模块、启发式门控、云端约束项、拥塞传播机制和奖励函数各部分的贡献。
+071: 第四，当前结果显示PPO-GAT-Scoring优于PPO-Baseline和PPO-GAT-Naive，但仍需扩大随机种子数量、增加置信区间或显著性分析，使论文结论更严谨。第五，轻量系统验证已经跑通，但尚未接入Gazebo/ROS2或更真实的多机器人仿真平台，系统级说服力还需要增强。第六，论文写作素材已有雏形，但方法公式化、实验图表解释、相关工作归纳和创新点凝练仍需继续完善。
+072: 4.2 尚未完成的工作
+073: 尚未完成的工作主要包括：一是扩大环境规模，将机器人数量、计算节点数量和任务类型数量逐步提升，验证算法在规模变化下的稳定性；二是补充传统算法和启发式算法对比，包括先来先服务、最短作业优先、MinMin、MaxMin或负载均衡类策略；三是补充消融实验，包括去除GAT、去除节点打分、去除启发式门控、去除云端约束、去除拥塞传播、调整奖励权重等；四是完善动态权重奖励函数，使其能根据任务场景和系统状态调整不同指标权重；五是接入或模拟更接近实际机器人系统的通信过程与任务执行过程；六是整理论文正文。
+074: 4.3 解决问题的技术思路或措施
+075: 针对规模不足问题，下一阶段将首先在不改变核心环境接口的情况下扩展configs/env.yaml，形成小规模、中规模和较大规模三组配置，例如3机器人4节点、10机器人8节点、20至30机器人20节点，并保持相同评估脚本输出可比指标。针对动态场景不足问题，将在配置文件中增加场景参数，分别设置高负载、低电量、deadline紧急、边缘拥塞和云端高时延等场景，观察策略在不同场景下的节点选择分布和性能差异。
+076: 针对消融不足问题，将基于现有训练脚本增加ablation配置，保持训练步数、随机种子和环境参数一致，仅改变一个模块，以避免对比混杂。针对动态权重问题，将在奖励函数中引入场景权重向量，根据任务优先级、deadline紧迫度、机器人剩余能量和系统backlog动态调整时延、能耗和负载均衡惩罚。针对系统验证不足问题，短期内继续增强轻量系统验证的事件日志和可视化，长期将与ROS2/Gazebo流程对接，使任务产生、机器人状态和调度决策之间形成更真实的数据交互。
+077: 4.4 下一阶段详细计划
+078: 2026年6月：完成环境规模扩展和配置分组，补充至少两组更大规模场景；完善评估脚本，使其自动输出均值、标准差、置信区间和节点选择分布；修正已有代码中部分注释乱码和结果字段命名不统一问题。
+079: 2026年7月：完成传统调度算法补充和消融实验第一轮，重点比较PPO-Baseline、PPO-GAT-Scoring、无节点打分GAT、无启发式门控GAT和传统启发式策略；输出实验表格和柱状图，形成论文实验章节初稿。
+080: 2026年8月：完善动态权重奖励函数和多场景实验，设置日常作业、紧急任务、低电量、边缘拥塞等场景，分析策略在不同场景下的权衡能力；补充失败案例分析，说明算法边界和改进方向。
+081: 2026年9月：开展更大规模重复实验和结果整理，固定最终模型参数，完成关键图表、统计分析和实验结论。根据实验结果确定论文主方法和对比方法的最终表述。
+082: 2026年10月至2027年1月：完成论文撰写、修改和答辩准备。论文写作重点包括相关工作、系统模型、算法设计、奖励函数、实验设置、结果分析和总结展望。同步整理代码、模型和实验数据，保证论文结果可复现。
+083: 五、主要参考文献
+084: [1] Lei B, Liu Z Y, Wang X L, et al. A new edge computing solution based on cloud, network, and edge integration: Computing power network[J]. Telecommunication Science, 2019, 35(9): 44-51.
+085: [2] Jia Q M, Ding R, Liu H, et al. A review of research progress on computing power network[J]. Journal of Network and Information Security, 2021, 7(5): 1-12.
+086: [3] He T, Yang Z D, Cao C, et al. Analysis of several key technical issues in the development of computing power network[J]. Telecommunication Science, 2022, 38(6): 62-70.
+087: [4] Zhou X, Li Z. Cloud-edge-end collaborative scheduling technology for computing power network[J]. ZTE Communications, 2023, 29(4): 32-37.
+088: [5] Elbamby M S, Perfecto C, Bennis M, et al. Toward low-latency and ultra-reliable virtual reality[J]. IEEE Network, 2018, 32(2): 78-84.
+089: [6] Peng Y, Shi B, Jiang T, et al. A survey on in-vehicle time-sensitive networking[J]. IEEE Internet of Things Journal, 2023, 10(16): 14375-14396.
+090: [7] Xu S, Perez M, Yang K, et al. Determination of the latency effects on surgical performance and acceptable latency levels in telesurgery[J]. Surgical Endoscopy, 2014, 28(9): 2569-2576.
+091: [8] Han X Y. Research and simulation verification of resource allocation methods for computing-network convergence[D]. Beijing: Beijing University of Posts and Telecommunications, 2023.
+092: [9] Gong X M. Research on software-defined computing power perception and routing algorithms[D]. Beijing: Academy of Military Sciences, 2024.
+093: [10] Liang Z L. Research on routing and resource allocation technologies in computing-network integrated optical networks[D]. Beijing: Beijing University of Posts and Telecommunications, 2024.
+094: [11] Gurobi Optimization LLC. Gurobi optimizer reference manual[M]. Houston: Gurobi Optimization LLC, 2021.
+095: [12] Long Y, Wang Z, Lan S, et al. Energy-latency tradeoff for task offloading and resource allocation in vehicular edge computing[J]. Computer Networks, 2025, 258: 111026.
+096: [13] Li X, Chen L, Yuan Z, et al. AIHO: enhancing task offloading and reducing latency in serverless multi-edge-to-cloud systems[J]. Future Generation Computer Systems, 2025, 165: 107607.
+097: [14] Namyar P, Arzani B, Beckett R, et al. Minding the gap between fast heuristics and their optimal counterparts[C]//Proceedings of the 21st ACM Workshop on Hot Topics in Networks. 2022: 138-144.
+098: [15] Luan Z, Li Q, Jiang Y, et al. MATE: when multi-agent deep reinforcement learning meets traffic engineering in multi-domain networks[J]. Computer Networks, 2024, 247: 110399.
+099: [16] Akhauri Y, Abdelfattah M S. Multi-predict: Few shot predictors for efficient neural architecture search[EB/OL]. arXiv:2306.02459, 2023.
+100: [17] 王静, 谢鲲, 曾鑫, 等. 基于强化学习的算力网络管理和调度[J/OL]. 计算机学报, 2025.
+101: [18] 高静. 算网资源协同下的任务调度方法[D]. 北京: 北京邮电大学, 2025.
+102: [19] 娄凯皓. 多智能体强化学习在智慧城市下的应用与优化研究[D]. 长春: 吉林大学, 2024.
+103: [20] 赵志岩. 分布式异构算力环境下并发DAG任务调度算法研究[D]. 成都: 电子科技大学, 2025.
+104: [21] 平雅霓. 基于GNN的算力网络工作流调度方法的研究与实现[D]. 北京: 北京邮电大学, 2024.
+105: [22] 朱涵. 算力网络资源协同调度机制研究[D]. 北京: 北京邮电大学, 2023.
+106: [23] Schulman J, Wolski F, Dhariwal P, et al. Proximal policy optimization algorithms[EB/OL]. arXiv:1707.06347, 2017.
+107: [24] Veličković P, Cucurull G, Casanova A, et al. Graph attention networks[EB/OL]. arXiv:1710.10903, 2017.
+108: [25] Mnih V, Kavukcuoglu K, Silver D, et al. Human-level control through deep reinforcement learning[J]. Nature, 2015, 518(7540): 529-533.
+109: [26] Sutton R S, Barto A G. Reinforcement Learning: An Introduction[M]. 2nd ed. Cambridge: MIT Press, 2018.
+110: [27] Lillicrap T P, Hunt J J, Pritzel A, et al. Continuous control with deep reinforcement learning[EB/OL]. arXiv:1509.02971, 2015.
+111: [28] Mnih V, Badia A P, Mirza M, et al. Asynchronous methods for deep reinforcement learning[C]//International Conference on Machine Learning. 2016: 1928-1937.
+112: [29] Wang Z, Schaul T, Hessel M, et al. Dueling network architectures for deep reinforcement learning[C]//International Conference on Machine Learning. 2016: 1995-2003.
+113: [30] Fortunato M, Azar M G, Piot B, et al. Noisy networks for exploration[EB/OL]. arXiv:1706.10295, 2017.
+114: [31] Guo S, Liu J, Yang Y, et al. Energy-efficient dynamic computation offloading and cooperative task scheduling in mobile cloud computing[J]. IEEE Transactions on Mobile Computing, 2019, 18(2): 319-333.
+115: [32] Mao Y, You C, Zhang J, et al. A survey on mobile edge computing: the communication perspective[J]. IEEE Communications Surveys & Tutorials, 2017, 19(4): 2322-2358.
