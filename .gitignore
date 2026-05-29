@@ -13,6 +13,7 @@ outputs/
 checkpoints/
 wandb/
 tensorboard/
+tmp*/
 
 *.pt
 *.pth

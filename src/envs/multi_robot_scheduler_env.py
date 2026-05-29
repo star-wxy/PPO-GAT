@@ -26,6 +26,9 @@ class SchedulerEnv(gym.Env):
         self.task_type_configs = env_config.get("task_types", [])
         self.network_cfg = env_config.get("network", {})
         self.reward_cfg = env_config.get("reward", {})
+        self.congestion_propagation_enabled = bool(
+            self.network_cfg.get("congestion_propagation_enabled", True)
+        )
 
         self.task_size_min = env_config["task"]["size_min"]
         self.task_size_max = env_config["task"]["size_max"]
@@ -659,7 +662,8 @@ class SchedulerEnv(gym.Env):
                 chosen_node.cpu_used + task_size * 0.55,
             )
 
-        self._propagate_congestion(action, task_size)
+        if self.congestion_propagation_enabled:
+            self._propagate_congestion(action, task_size)
 
         local_compute_cost = current_task.local_compute_demand / max(current_robot.local_cpu, 1e-6)
         transfer_energy = self._robot_to_node_transfer_energy(current_task.source_robot_id, action, current_task)
@@ -836,6 +840,7 @@ class SchedulerEnv(gym.Env):
         info["source_robot_local_cpu"] = float(current_robot.local_cpu)
         info["node_type"] = chosen_node.node_type
         info["node_load_ratio"] = float(chosen_node.load_ratio)
+        info["congestion_propagation_enabled"] = bool(self.congestion_propagation_enabled)
         info["current_robot_energy_before"] = float(robot_energy_before)
         info["current_robot_energy"] = float(current_robot.energy)
         info["robot_anchor_node"] = int(anchor_node)

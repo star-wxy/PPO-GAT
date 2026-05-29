@@ -23,6 +23,8 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         hidden_dim: int = 32,
         gat_heads: int = 4,
         dropout: float = 0.1,
+        use_heuristic_score: bool = True,
+        heuristic_gate_init: float = 0.85,
     ):
         super().__init__(observation_space, features_dim)
 
@@ -32,6 +34,7 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
         self.node_feat_dim = 17
         self.hidden_dim = hidden_dim
         self.obs_dim = int(observation_space.shape[0])
+        self.use_heuristic_score = bool(use_heuristic_score)
 
         cpu_tensor = torch.tensor(node_cpu_capacities, dtype=torch.float32)
         latency_tensor = torch.tensor(node_latencies, dtype=torch.float32)
@@ -100,7 +103,7 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
             nn.LayerNorm(hidden_dim),
             nn.SiLU(),
         )
-        self.heuristic_gate = nn.Parameter(torch.tensor(0.85))
+        self.heuristic_gate = nn.Parameter(torch.tensor(float(heuristic_gate_init)))
         self.score_scale = nn.Parameter(torch.tensor(2.0))
 
         fusion_input_dim = num_nodes + num_nodes * hidden_dim + hidden_dim * 3
@@ -490,10 +493,12 @@ class NodeScoringGATFeatureExtractor(BaseFeaturesExtractor):
             - 0.9 * cloud_risk
             - 1.1 * cloud_guard_penalty
         )
-        gate = self.heuristic_gate.clamp(0.0, 1.0)
-        node_scores = self.score_scale.clamp(0.8, 3.0) * (
-            gate * heuristic_scores + (1.0 - gate) * learned_scores
-        )
+        if self.use_heuristic_score:
+            gate = self.heuristic_gate.clamp(0.0, 1.0)
+            mixed_scores = gate * heuristic_scores + (1.0 - gate) * learned_scores
+        else:
+            mixed_scores = learned_scores
+        node_scores = self.score_scale.clamp(0.8, 3.0) * mixed_scores
         node_descriptors = self.node_descriptor(node_inputs).reshape(batch_size, -1)
         raw_features = self.raw_encoder(self._normalize_observations(observations))
 
